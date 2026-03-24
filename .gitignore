@@ -1,2 +1,9 @@
 docs/
 .claude/
+
+# Secrets — never commit these
+backend/.env
+ui/.env.local
+.env
+.venv/
+node_modules/

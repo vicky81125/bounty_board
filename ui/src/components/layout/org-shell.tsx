@@ -1,0 +1,79 @@
+"use client"
+
+import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { usePathname } from "next/navigation"
+import { Building2, LayoutDashboard, ListTodo, LogOut, Users } from "lucide-react"
+import { useAuth } from "@/providers/auth-provider"
+import type { AuthUser } from "@/lib/auth"
+import { cn } from "@/lib/utils"
+
+interface OrgShellProps {
+  user: AuthUser
+  children: React.ReactNode
+}
+
+const NAV_ITEMS = [
+  { href: "/org/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/org/bounties", label: "Bounties", icon: ListTodo },
+  { href: "/org/submissions", label: "Submissions", icon: ListTodo },
+  { href: "/org/members", label: "Members", icon: Users, adminOnly: true },
+]
+
+export function OrgShell({ user, children }: OrgShellProps) {
+  const { signOut } = useAuth()
+  const router = useRouter()
+  const pathname = usePathname()
+
+  async function handleSignOut() {
+    await signOut()
+    router.push("/login")
+  }
+
+  return (
+    <div className="min-h-screen flex">
+      {/* Sidebar */}
+      <aside className="w-60 border-r bg-background flex flex-col shrink-0">
+        <div className="p-4 border-b">
+          <Link href="/org/dashboard" className="flex items-center gap-2 font-semibold">
+            <Building2 className="h-5 w-5" />
+            <span>Bounty Board</span>
+          </Link>
+        </div>
+
+        <nav className="flex-1 p-3 space-y-1">
+          {NAV_ITEMS.map(({ href, label, icon: Icon }) => (
+            <Link
+              key={href}
+              href={href}
+              className={cn(
+                "flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors",
+                pathname.startsWith(href)
+                  ? "bg-accent text-accent-foreground font-medium"
+                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+              )}
+            >
+              <Icon className="h-4 w-4" />
+              {label}
+            </Link>
+          ))}
+        </nav>
+
+        <div className="p-4 border-t space-y-2">
+          <p className="text-sm font-medium truncate">{user.display_name}</p>
+          <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+          <button
+            onClick={handleSignOut}
+            className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors w-full mt-1"
+          >
+            <LogOut className="h-4 w-4" />
+            Sign out
+          </button>
+        </div>
+      </aside>
+
+      {/* Main content */}
+      <main className="flex-1 p-6 overflow-auto">{children}</main>
+    </div>
+  )
+}
