@@ -32,6 +32,7 @@ const schema = z.object({
   end_date: z.string().optional(),
   prize_amount: z.coerce.number().min(0).optional(),
   prize_currency: z.string().default("USD"),
+  max_submissions_per_user: z.coerce.number().int().min(1).optional().nullable(),
   eligibility_notes: z.string().optional(),
   resources: z.array(resourceSchema).default([]),
   rubric: z.array(rubricItemSchema).min(1, "At least one rubric criterion required"),
@@ -129,6 +130,7 @@ export default function NewBountyPage() {
         start_date: data.start_date || null,
         end_date: data.end_date || null,
         prize,
+        max_submissions_per_user: data.max_submissions_per_user ?? null,
         eligibility_notes: data.eligibility_notes || null,
         resources: data.resources.map((r) => ({ label: r.label, url: r.url })),
         rubric: data.rubric.map((r) => ({
@@ -333,6 +335,20 @@ export default function NewBountyPage() {
               </select>
             </Field>
           </div>
+
+          <Field label="Max submissions per user">
+            <div className="flex items-center gap-3">
+              <input
+                type="number"
+                min={1}
+                step={1}
+                {...register("max_submissions_per_user")}
+                className="w-32 rounded-md border px-3 py-2 text-sm"
+                placeholder="Unlimited"
+              />
+              <span className="text-xs text-muted-foreground">Leave blank for unlimited</span>
+            </div>
+          </Field>
 
           <Field label="Eligibility Notes (optional)">
             <textarea
