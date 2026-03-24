@@ -58,8 +58,8 @@ async def update_activity(
     await pool.execute(
         """
         UPDATE sessions
-        SET last_activity = $1,
-            expires_at    = $1 + ($2 || ' days')::INTERVAL
+        SET last_activity = $1::timestamptz,
+            expires_at    = $1::timestamptz + ($2 || ' days')::INTERVAL
         WHERE session_id = $3
         """,
         now,

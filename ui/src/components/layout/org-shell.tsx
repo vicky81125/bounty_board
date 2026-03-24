@@ -11,16 +11,11 @@ import { cn } from "@/lib/utils"
 interface OrgShellProps {
   user: AuthUser
   children: React.ReactNode
+  orgId?: string
+  orgRole?: "admin" | "moderator"
 }
 
-const NAV_ITEMS = [
-  { href: "/org/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/org/bounties", label: "Bounties", icon: ListTodo },
-  { href: "/org/submissions", label: "Submissions", icon: ListTodo },
-  { href: "/org/members", label: "Members", icon: Users, adminOnly: true },
-]
-
-export function OrgShell({ user, children }: OrgShellProps) {
+export function OrgShell({ user, children, orgId, orgRole }: OrgShellProps) {
   const { signOut } = useAuth()
   const router = useRouter()
   const pathname = usePathname()
@@ -30,19 +25,36 @@ export function OrgShell({ user, children }: OrgShellProps) {
     router.push("/login")
   }
 
+  const navItems = orgId
+    ? [
+        { href: `/org/${orgId}/dashboard`, label: "Dashboard", icon: LayoutDashboard },
+        { href: `/org/${orgId}/bounties`, label: "Bounties", icon: ListTodo },
+        { href: `/org/${orgId}/members`, label: "Members", icon: Users, adminOnly: true },
+      ]
+    : [
+        { href: "/org/dashboard", label: "Dashboard", icon: LayoutDashboard },
+      ]
+
+  const visibleItems = navItems.filter(
+    ({ adminOnly }) => !adminOnly || orgRole === "admin"
+  )
+
   return (
     <div className="min-h-screen flex">
       {/* Sidebar */}
       <aside className="w-60 border-r bg-background flex flex-col shrink-0">
         <div className="p-4 border-b">
-          <Link href="/org/dashboard" className="flex items-center gap-2 font-semibold">
+          <Link
+            href={orgId ? `/org/${orgId}/dashboard` : "/org/dashboard"}
+            className="flex items-center gap-2 font-semibold"
+          >
             <Building2 className="h-5 w-5" />
             <span>Bounty Board</span>
           </Link>
         </div>
 
         <nav className="flex-1 p-3 space-y-1">
-          {NAV_ITEMS.map(({ href, label, icon: Icon }) => (
+          {visibleItems.map(({ href, label, icon: Icon }) => (
             <Link
               key={href}
               href={href}

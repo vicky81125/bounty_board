@@ -1,8 +1,26 @@
 from __future__ import annotations
 
+import json
+
 import asyncpg
 
 from app.config import Settings
+
+
+async def _init_connection(conn: asyncpg.Connection) -> None:
+    """Register JSON/JSONB codecs so asyncpg decodes JSONB columns to Python objects."""
+    await conn.set_type_codec(
+        "jsonb",
+        encoder=json.dumps,
+        decoder=json.loads,
+        schema="pg_catalog",
+    )
+    await conn.set_type_codec(
+        "json",
+        encoder=json.dumps,
+        decoder=json.loads,
+        schema="pg_catalog",
+    )
 
 
 async def create_pool(settings: Settings) -> asyncpg.Pool:
@@ -16,4 +34,5 @@ async def create_pool(settings: Settings) -> asyncpg.Pool:
         min_size=2,
         max_size=10,
         statement_cache_size=0,
+        init=_init_connection,
     )

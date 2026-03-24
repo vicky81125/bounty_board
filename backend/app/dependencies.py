@@ -44,3 +44,29 @@ async def require_org_admin(
     if not membership or membership["role"] != "admin":
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Org admin access required")
     return user
+
+
+async def require_org_member(
+    org_id: UUID,
+    user: User = Depends(require_organizer),
+    pool: asyncpg.Pool = Depends(get_pool),
+) -> User:
+    """Any org member (admin or moderator). Used for read-only org-scoped endpoints."""
+    membership = await orgs_repo.get_membership(pool, org_id, user.id)
+    if not membership:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Org membership required")
+    return user
+
+
+async def require_org_admin_or_moderator(
+    org_id: UUID,
+    user: User = Depends(require_organizer),
+    pool: asyncpg.Pool = Depends(get_pool),
+) -> User:
+    """Admin or moderator. Used for bounty edit endpoints."""
+    membership = await orgs_repo.get_membership(pool, org_id, user.id)
+    if not membership or membership["role"] not in ("admin", "moderator"):
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN, detail="Org admin or moderator required"
+        )
+    return user

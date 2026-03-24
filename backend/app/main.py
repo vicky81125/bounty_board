@@ -9,7 +9,7 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
-from app.api.routes import identity
+from app.api.routes import bounties, identity, orgs
 from app.config import get_settings
 from app.database.connection import create_pool
 from app.middleware.auth import authenticate_request
@@ -60,8 +60,10 @@ def create_app() -> FastAPI:
     # Auth runs as a middleware function on every request (sets request.state)
     app.middleware("http")(authenticate_request_middleware)
 
-    # Routes
+    # Routes — order matters: /orgs/mine must come before /orgs/{org_id}
     app.include_router(identity.router, prefix=settings.api_prefix)
+    app.include_router(orgs.router, prefix=settings.api_prefix)
+    app.include_router(bounties.router, prefix=settings.api_prefix)
     app.include_router(_health_router())
 
     return app

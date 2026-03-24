@@ -2,5 +2,7 @@
   "/_not-found/page": "app/_not-found/page.js",
   "/(auth)/login/page": "app/(auth)/login/page.js",
   "/(auth)/signup/page": "app/(auth)/signup/page.js",
-  "/(org)/org/dashboard/page": "app/(org)/org/dashboard/page.js"
+  "/(solver)/dashboard/page": "app/(solver)/dashboard/page.js",
+  "/(solver)/bounties/page": "app/(solver)/bounties/page.js",
+  "/(solver)/bounties/[id]/page": "app/(solver)/bounties/[id]/page.js"
 }

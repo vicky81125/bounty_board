@@ -5,5 +5,21 @@ docs/
 backend/.env
 ui/.env.local
 .env
+
+# Python
 .venv/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+
+# Next.js
+ui/.next/
+ui/out/
+
+# Node
 node_modules/
+
+# Misc
+.DS_Store
+.vercel/

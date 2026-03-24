@@ -26,6 +26,61 @@
       "static/chunks/main-app.js",
       "static/chunks/app/(org)/org/dashboard/page.js"
     ],
+    "/(org)/org/new/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(org)/org/new/page.js"
+    ],
+    "/(org)/org/[orgId]/layout": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(org)/org/[orgId]/layout.js"
+    ],
+    "/(org)/org/[orgId]/dashboard/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(org)/org/[orgId]/dashboard/page.js"
+    ],
+    "/(org)/org/[orgId]/bounties/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(org)/org/[orgId]/bounties/page.js"
+    ],
+    "/(org)/org/[orgId]/members/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(org)/org/[orgId]/members/page.js"
+    ],
+    "/(org)/org/[orgId]/bounties/new/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(org)/org/[orgId]/bounties/new/page.js"
+    ],
+    "/(org)/org/[orgId]/bounties/[bountyId]/edit/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(org)/org/[orgId]/bounties/[bountyId]/edit/page.js"
+    ],
+    "/(solver)/layout": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(solver)/layout.js"
+    ],
+    "/(solver)/dashboard/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(solver)/dashboard/page.js"
+    ],
+    "/(solver)/bounties/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(solver)/bounties/page.js"
+    ],
+    "/(solver)/bounties/[id]/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(solver)/bounties/[id]/page.js"
+    ],
     "/_not-found/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
