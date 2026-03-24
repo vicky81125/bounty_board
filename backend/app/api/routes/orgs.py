@@ -94,6 +94,20 @@ async def get_org(
     return org
 
 
+@router.get("/{org_id}/members/me")
+async def get_my_membership(
+    org_id: UUID,
+    user: User = Depends(get_current_user),
+    pool: asyncpg.Pool = Depends(get_pool),
+) -> dict:
+    """Return the current user's membership for this org. 404 if not a member.
+    Used by the org layout to get the user's role without fetching all members."""
+    membership = await orgs_repo.get_membership(pool, org_id, user.id)
+    if not membership:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Not a member of this org")
+    return dict(membership)
+
+
 @router.get("/{org_id}/members")
 async def list_members(
     org_id: UUID,

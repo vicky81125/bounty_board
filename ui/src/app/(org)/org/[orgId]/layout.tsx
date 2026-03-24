@@ -14,16 +14,12 @@ export default async function OrgIdLayout({ children, params }: Props) {
   if (!session) redirect("/login")
   if (session.user.account_type === "participant") redirect("/dashboard")
 
-  // Verify user is a member of this org and get their role
-  const members = await serverFetch<{ user_id: string; role: string }[]>(
-    `/orgs/${orgId}/members`
+  // Verify user is a member of this org and get their role.
+  // Uses /members/me to fetch only the current user's membership (not all members).
+  const membership = await serverFetch<{ user_id: string; role: string }>(
+    `/orgs/${orgId}/members/me`,
+    { noCache: true }
   )
-  if (!members) {
-    // API returned 403/404 — user is not a member of this org
-    redirect("/org/dashboard")
-  }
-
-  const membership = members.find((m) => m.user_id === session.user.id)
   if (!membership) redirect("/org/dashboard")
 
   const orgRole = membership.role as "admin" | "moderator"
