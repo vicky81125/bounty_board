@@ -29,6 +29,7 @@ export function OrgShell({ user, children, orgId, orgRole }: OrgShellProps) {
     ? [
         { href: `/org/${orgId}/dashboard`, label: "Dashboard", icon: LayoutDashboard },
         { href: `/org/${orgId}/bounties`, label: "Bounties", icon: ListTodo },
+        { href: `/org/${orgId}/submissions`, label: "Submissions", icon: ListTodo },
         { href: `/org/${orgId}/members`, label: "Members", icon: Users, adminOnly: true },
       ]
     : [

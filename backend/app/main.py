@@ -10,16 +10,20 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
 from app.api.routes import bounties, identity, orgs
+from app.api.routes.submissions import org_router as org_submissions_router
+from app.api.routes.submissions import participant_router as participant_submissions_router
 from app.config import get_settings
 from app.database.connection import create_pool
 from app.middleware.auth import authenticate_request
 from app.middleware.csrf_middleware import CSRFMiddleware
+from app.services.storage_service import StorageService
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     settings = get_settings()
     app.state.db = await create_pool(settings)
+    app.state.storage = StorageService(settings.supabase_url, settings.supabase_service_role_key)
     yield
     await app.state.db.close()
 
@@ -64,6 +68,8 @@ def create_app() -> FastAPI:
     app.include_router(identity.router, prefix=settings.api_prefix)
     app.include_router(orgs.router, prefix=settings.api_prefix)
     app.include_router(bounties.router, prefix=settings.api_prefix)
+    app.include_router(participant_submissions_router, prefix=settings.api_prefix)
+    app.include_router(org_submissions_router, prefix=settings.api_prefix)
     app.include_router(_health_router())
 
     return app

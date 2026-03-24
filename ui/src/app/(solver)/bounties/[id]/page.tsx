@@ -1,3 +1,4 @@
+import Link from "next/link"
 import { notFound } from "next/navigation"
 import { serverFetch } from "@/lib/server-api"
 import { getServerSession } from "@/lib/server-auth"
@@ -30,7 +31,14 @@ interface Bounty {
   prize: { type: string; amount: number; currency: string; label: string } | null
   resources: Resource[]
   eligibility_notes: string | null
+  max_submissions_per_user: number | null
   created_at: string
+}
+
+interface Submission {
+  id: string
+  status: "pending" | "under_review" | "scored" | "rejected"
+  attempt_number: number
 }
 
 interface Props {
@@ -58,10 +66,18 @@ function daysLeft(end: string | null): string | null {
 
 export default async function BountyDetailPage({ params }: Props) {
   const { id } = await params
-  const bounty = await serverFetch<Bounty>(`/bounties/${id}`)
+  const [bounty, session] = await Promise.all([
+    serverFetch<Bounty>(`/bounties/${id}`),
+    getServerSession(),
+  ])
   if (!bounty) notFound()
 
-  const session = await getServerSession()
+  const isParticipant = session?.user.account_type === "participant"
+  // Fetch participant's current submission (null if none or if organizer)
+  const mySubmission = isParticipant
+    ? await serverFetch<Submission>(`/bounties/${id}/submissions/mine`, { noCache: true })
+    : null
+
   const deadline = daysLeft(bounty.end_date)
 
   return (
@@ -222,13 +238,12 @@ export default async function BountyDetailPage({ params }: Props) {
 
       {/* Actions */}
       <div className="flex gap-3 pt-2 border-t">
-        <button
-          disabled={bounty.status !== "open"}
-          title={bounty.status !== "open" ? "Bounty is closed" : undefined}
-          className="rounded-md bg-primary px-6 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          Submit Solution
-        </button>
+        <SubmitCTA
+          bountyId={id}
+          bountyStatus={bounty.status}
+          isParticipant={isParticipant}
+          submission={mySubmission}
+        />
         <button className="rounded-md border px-6 py-2 text-sm hover:bg-muted">
           Copy for AI
         </button>
@@ -239,5 +254,63 @@ export default async function BountyDetailPage({ params }: Props) {
         Leaderboard coming soon
       </div>
     </article>
+  )
+}
+
+function SubmitCTA({
+  bountyId,
+  bountyStatus,
+  isParticipant,
+  submission,
+}: {
+  bountyId: string
+  bountyStatus: string
+  isParticipant: boolean
+  submission: Submission | null
+}) {
+  const btnBase =
+    "rounded-md px-6 py-2 text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+  const primary = `${btnBase} bg-primary text-primary-foreground hover:bg-primary/90`
+
+  // Organizers don't see a submit CTA
+  if (!isParticipant) return null
+
+  if (bountyStatus !== "open") {
+    return (
+      <button disabled className={primary}>
+        Bounty Closed
+      </button>
+    )
+  }
+
+  if (!submission) {
+    return (
+      <Link href={`/bounties/${bountyId}/submit`} className={primary}>
+        Submit Solution
+      </Link>
+    )
+  }
+
+  if (submission.status === "pending") {
+    return (
+      <Link href={`/bounties/${bountyId}/my-submission`} className={primary}>
+        Edit Submission
+      </Link>
+    )
+  }
+
+  if (submission.status === "rejected") {
+    return (
+      <Link href={`/bounties/${bountyId}/submit`} className={primary}>
+        Submit Again
+      </Link>
+    )
+  }
+
+  // under_review or scored
+  return (
+    <button disabled className={primary} title="Under review">
+      Submission Submitted
+    </button>
   )
 }

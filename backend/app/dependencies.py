@@ -58,6 +58,12 @@ async def require_org_member(
     return user
 
 
+def require_participant(user: User = Depends(get_current_user)) -> User:
+    if user.account_type != "participant":
+        raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Participant account required")
+    return user
+
+
 async def require_org_admin_or_moderator(
     org_id: UUID,
     user: User = Depends(require_organizer),
