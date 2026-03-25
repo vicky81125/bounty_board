@@ -47,7 +47,7 @@ export default async function MembersPage({ params }: Props) {
   // Fetch all members with profile info
   const { data: rows } = await admin
     .from("org_members")
-    .select("user_id, role, created_at, profiles!inner(display_name, email)")
+    .select("user_id, role, created_at, profiles(display_name, email)")
     .eq("org_id", orgId)
     .order("created_at")
 

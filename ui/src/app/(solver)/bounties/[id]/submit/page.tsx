@@ -168,7 +168,7 @@ export default function SubmitPage() {
                 onClick={() => { setActiveType(fmt); setError(null) }}
                 className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${
                   activeType === fmt
-                    ? "bg-background shadow-sm text-foreground"
+                    ? "bg-black text-white shadow-sm"
                     : "text-muted-foreground hover:text-foreground"
                 }`}
               >

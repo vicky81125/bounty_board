@@ -257,24 +257,31 @@ BEGIN
   END IF;
 
   RETURN QUERY
+  WITH base AS (
+    SELECT
+      p.id                                                                            AS uid,
+      p.username                                                                      AS uname,
+      p.display_name                                                                  AS dname,
+      p.avatar_url                                                                    AS aurl,
+      ss.total_score                                                                  AS tscore,
+      ss.max_possible_score                                                           AS mscore,
+      ROUND(ss.total_score::NUMERIC / NULLIF(ss.max_possible_score::NUMERIC,0)*100,1) AS spct,
+      sub.submitted_at                                                                AS subat,
+      RANK() OVER (ORDER BY ss.total_score DESC, sub.submitted_at ASC)               AS rnk,
+      COUNT(*) OVER ()                                                                AS tcnt,
+      (p.id = v_caller_id)                                                            AS iscaller
+    FROM submission_scores ss
+    JOIN submissions sub ON sub.id = ss.submission_id
+    JOIN profiles p      ON p.id  = sub.user_id
+    WHERE sub.bounty_id = p_bounty_id
+      AND sub.status = 'scored'
+  )
   SELECT
-    p.id                                                                        AS user_id,
-    p.username,
-    p.display_name,
-    p.avatar_url,
-    ss.total_score,
-    ss.max_possible_score,
-    ROUND(ss.total_score::NUMERIC / NULLIF(ss.max_possible_score::NUMERIC, 0) * 100, 1) AS score_percentage,
-    sub.submitted_at,
-    RANK() OVER (ORDER BY ss.total_score DESC, sub.submitted_at ASC)            AS rank,
-    COUNT(*) OVER ()                                                             AS total_count,
-    (p.id = v_caller_id)                                                        AS is_caller
-  FROM submission_scores ss
-  JOIN submissions sub ON sub.id = ss.submission_id
-  JOIN profiles p      ON p.id = sub.user_id
-  WHERE sub.bounty_id = p_bounty_id
-    AND sub.status = 'scored'
-  ORDER BY ss.total_score DESC, sub.submitted_at ASC
+    uid, uname, dname, aurl,
+    tscore, mscore, spct,
+    subat, rnk::BIGINT, tcnt::BIGINT, iscaller
+  FROM base
+  ORDER BY tscore DESC, subat ASC
   LIMIT p_limit OFFSET p_offset;
 END;
 $$;

@@ -87,7 +87,9 @@ export function OrgShell({ user, children, orgId, orgRole }: OrgShellProps) {
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 p-6 overflow-auto">{children}</main>
+      <main className="flex-1 overflow-auto">
+        <div className="max-w-4xl mx-auto px-10 py-8">{children}</div>
+      </main>
     </div>
   )
 }
