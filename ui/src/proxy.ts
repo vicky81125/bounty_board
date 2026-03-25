@@ -4,7 +4,7 @@ import { safeRedirect } from '@/lib/utils/safe-redirect'
 
 const PUBLIC_PATHS = ['/login', '/signup', '/auth/callback']
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl
 
   // Always refresh session first — required for @supabase/ssr cookie handling
