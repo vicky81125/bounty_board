@@ -85,13 +85,17 @@ export default function SubmitPage() {
 
         if (activeType === "zip" && file) {
           // Step 1: get signed upload URL from our route handler
-          const urlResp = await fetch(`/api/upload?bountyId=${id}`, { method: "POST" })
+          const urlResp = await fetch(`/api/upload`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ bounty_id: id }),
+          })
           if (!urlResp.ok) {
             const err = await urlResp.json().catch(() => ({}))
             setError(err.error ?? "Failed to start upload — please try again")
             return
           }
-          const { signedUrl, uploadToken: token } = await urlResp.json()
+          const { signed_url: signedUrl, upload_token: token } = await urlResp.json()
 
           // Step 2: PUT file directly to Supabase Storage
           setUploadProgress(0)

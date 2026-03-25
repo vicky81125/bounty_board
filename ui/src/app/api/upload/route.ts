@@ -101,7 +101,7 @@ export async function POST(req: NextRequest) {
     .eq('id', pending.id)
 
   const { data: signedData, error: signError } = await auth.admin.storage
-    .from('submission-zips')
+    .from('submissions')
     .createSignedUploadUrl(storagePath)
 
   if (signError || !signedData) {
