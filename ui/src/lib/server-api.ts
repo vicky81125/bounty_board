@@ -4,7 +4,11 @@
  */
 import { cookies } from "next/headers"
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api"
+// INTERNAL_API_URL is set in Docker so SSR calls go directly to the backend
+// container over the internal network (faster, no Nginx round-trip).
+// Falls back to NEXT_PUBLIC_API_URL for local dev where both run on localhost.
+const API_BASE =
+  process.env.INTERNAL_API_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api"
 
 export async function serverFetch<T>(
   path: string,
