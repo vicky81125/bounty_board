@@ -149,7 +149,10 @@ DECLARE
   v_user_id   UUID;
   v_new_score NUMERIC;
 BEGIN
-  v_user_id := COALESCE(NEW.user_id, OLD.user_id);
+  -- submission_scores has no user_id — look it up from submissions
+  SELECT user_id INTO v_user_id
+  FROM submissions
+  WHERE id = COALESCE(NEW.submission_id, OLD.submission_id);
 
   SELECT COALESCE(SUM(
     ss.total_score::NUMERIC / NULLIF(ss.max_possible_score::NUMERIC, 0)

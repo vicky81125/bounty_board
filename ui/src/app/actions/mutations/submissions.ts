@@ -171,7 +171,7 @@ export async function updateSubmission(
   // Switching FROM zip: delete old storage file
   if (sub.submission_type === 'zip' && updates.submissionType && updates.submissionType !== 'zip') {
     if (sub.file_path) {
-      await auth.admin.storage.from('submission-zips').remove([sub.file_path])
+      await auth.admin.storage.from('submissions').remove([sub.file_path])
     }
   }
 
@@ -250,7 +250,7 @@ export async function getDownloadUrl(submissionId: string) {
   }
 
   const { data: signed, error } = await auth.admin.storage
-    .from('submission-zips')
+    .from('submissions')
     .createSignedUrl(sub.file_path, 3600) // 1-hour expiry
 
   if (error || !signed) return { error: 'Failed to generate download URL' }
