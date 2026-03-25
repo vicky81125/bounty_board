@@ -1,11 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useTransition } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { useForm, useFieldArray } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
-import { apiRequest } from "@/lib/api"
+import { createBounty } from "@/app/actions/mutations/bounties"
 import { BOUNTY_TAGS } from "@/lib/constants"
 
 const rubricItemSchema = z.object({
@@ -46,7 +46,7 @@ export default function NewBountyPage() {
   const orgId = params.orgId as string
   const router = useRouter()
   const [apiError, setApiError] = useState<string | null>(null)
-  const [submitting, setSubmitting] = useState(false)
+  const [isPending, startTransition] = useTransition()
 
   const {
     register,
@@ -105,21 +105,21 @@ export default function NewBountyPage() {
     setValue("submission_formats", next)
   }
 
-  async function onSubmit(data: FormData) {
+  function onSubmit(data: FormData) {
     setApiError(null)
-    setSubmitting(true)
-    try {
-      const prize =
-        data.prize_amount !== undefined && data.prize_amount > 0
-          ? {
-              type: "single" as const,
-              amount: data.prize_amount,
-              currency: data.prize_currency,
-              label: `${data.prize_amount} ${data.prize_currency}`,
-            }
-          : null
 
-      const payload = {
+    const prize =
+      data.prize_amount !== undefined && data.prize_amount > 0
+        ? {
+            type: "single" as const,
+            amount: data.prize_amount,
+            currency: data.prize_currency,
+            label: `${data.prize_amount} ${data.prize_currency}`,
+          }
+        : null
+
+    startTransition(async () => {
+      const result = await createBounty(orgId, {
         title: data.title,
         description_md: data.description_md,
         ideal_output_md: data.ideal_output_md,
@@ -131,26 +131,21 @@ export default function NewBountyPage() {
         end_date: data.end_date || null,
         prize,
         max_submissions_per_user: data.max_submissions_per_user ?? null,
-        eligibility_notes: data.eligibility_notes || null,
+        eligibility_notes: data.eligibility_notes || undefined,
         resources: data.resources.map((r) => ({ label: r.label, url: r.url })),
         rubric: data.rubric.map((r) => ({
           criterion: r.criterion,
           max_points: Number(r.max_points),
         })),
         status: data.status,
-      }
-
-      await apiRequest(`/orgs/${orgId}/bounties`, {
-        method: "POST",
-        body: JSON.stringify(payload),
       })
-      router.push(`/org/${orgId}/bounties`)
-    } catch (err: any) {
-      const detail = err?.body?.detail
-      setApiError(typeof detail === "string" ? detail : "Failed to save bounty — please try again")
-    } finally {
-      setSubmitting(false)
-    }
+
+      if (result?.error) {
+        setApiError(result.error)
+      } else {
+        router.push(`/org/${orgId}/bounties`)
+      }
+    })
   }
 
   return (
@@ -446,10 +441,10 @@ export default function NewBountyPage() {
         <div className="flex gap-3 pt-4">
           <button
             type="submit"
-            disabled={submitting}
+            disabled={isPending}
             className="rounded-md bg-primary px-6 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
           >
-            {submitting ? "Saving…" : "Create Bounty"}
+            {isPending ? "Saving…" : "Create Bounty"}
           </button>
           <button
             type="button"

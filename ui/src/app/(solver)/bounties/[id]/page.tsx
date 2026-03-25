@@ -1,7 +1,8 @@
 import Link from "next/link"
 import { notFound } from "next/navigation"
-import { serverFetch } from "@/lib/server-api"
-import { getServerSession } from "@/lib/server-auth"
+import { createClient } from "@/lib/supabase/server"
+import { getBounty } from "@/app/actions/queries/bounties"
+import { getMySubmission, getMyBountySubmissions } from "@/app/actions/queries/submissions"
 import { BountyLeaderboard } from "@/components/leaderboard/bounty-leaderboard"
 
 interface Resource {
@@ -14,44 +15,9 @@ interface RubricRow {
   max_points: number
 }
 
-interface Bounty {
-  id: string
-  org_id: string
-  org_name: string
-  title: string
-  description_md: string
-  ideal_output_md: string
-  start_date: string | null
-  end_date: string | null
-  difficulty: string
-  tags: string[]
-  skills_required: string[]
-  submission_formats: string[]
-  rubric: RubricRow[]
-  status: "open" | "closed"
-  prize: { type: string; amount: number; currency: string; label: string } | null
-  resources: Resource[]
-  eligibility_notes: string | null
-  max_submissions_per_user: number | null
-  created_at: string
-}
-
-interface Submission {
-  id: string
-  status: "pending" | "under_review" | "scored" | "rejected"
-  attempt_number: number
-  submission_type: "zip" | "github_url" | "drive_url"
-  external_url: string | null
-  description: string
-  submitted_at: string
-  total_score: number | null
-  max_possible_score: number | null
-  review_notes: string | null
-}
-
 interface Props {
   params: Promise<{ id: string }>
-  searchParams: Promise<{ tab?: string }>
+  searchParams: Promise<{ tab?: string; leaderboard_page?: string }>
 }
 
 const difficultyColors: Record<string, string> = {
@@ -82,30 +48,45 @@ function daysLeft(end: string | null): string | null {
 
 export default async function BountyDetailPage({ params, searchParams }: Props) {
   const { id } = await params
-  const { tab = "details" } = await searchParams
+  const { tab = "details", leaderboard_page } = await searchParams
 
-  const [bounty, session] = await Promise.all([
-    serverFetch<Bounty>(`/bounties/${id}`),
-    getServerSession(),
-  ])
-  if (!bounty) notFound()
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
 
-  const isParticipant = session?.user.account_type === "participant"
+  let accountType: string | null = null
+  if (user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("account_type")
+      .eq("id", user.id)
+      .single()
+    accountType = profile?.account_type ?? null
+  }
 
-  // Fetch submissions in parallel — latest for CTA, all for the tab
-  const [mySubmission, myAllSubmissions] = isParticipant
+  const isParticipant = accountType === "participant"
+
+  const bountyResult = await getBounty(id)
+  if (bountyResult.error || !bountyResult.data) notFound()
+  const bounty = bountyResult.data as any
+
+  const [mySubmissionResult, myAllSubmissionsResult] = isParticipant
     ? await Promise.all([
-        serverFetch<Submission>(`/bounties/${id}/submissions/mine`, { noCache: true }),
-        serverFetch<Submission[]>(`/bounties/${id}/submissions/mine/all`, { noCache: true }),
+        getMySubmission(id),
+        getMyBountySubmissions(id),
       ])
-    : [null, null]
+    : [{ data: null }, { data: [] }]
+
+  const mySubmission = mySubmissionResult.data ?? null
+  const myAllSubmissions: any[] = myAllSubmissionsResult.data ?? []
 
   const deadline = daysLeft(bounty.end_date)
   const validTab = ["details", "leaderboard", "submissions"].includes(tab) ? tab : "details"
+  const orgName = bounty.orgs?.name ?? ""
+  const rubric: RubricRow[] = bounty.rubric ?? []
+  const resources: Resource[] = bounty.resources ?? []
 
   return (
     <article className="max-w-3xl mx-auto space-y-4">
-      {/* Header — always visible */}
       <div className="space-y-3">
         <div className="flex flex-wrap items-center gap-2">
           <span
@@ -120,18 +101,17 @@ export default async function BountyDetailPage({ params, searchParams }: Props) 
           >
             {bounty.status}
           </span>
-          {bounty.tags.map((t) => (
+          {(bounty.tags ?? []).map((t: string) => (
             <span key={t} className="rounded-full bg-secondary px-2 py-0.5 text-xs">
               {t}
             </span>
           ))}
         </div>
         <h1 className="text-3xl font-bold">{bounty.title}</h1>
-        <p className="text-muted-foreground">{bounty.org_name}</p>
+        <p className="text-muted-foreground">{orgName}</p>
         {bounty.prize && <p className="text-xl font-semibold">{bounty.prize.label}</p>}
       </div>
 
-      {/* Tabs — right below the header */}
       <nav className="flex border-b gap-0">
         {(
           [
@@ -154,10 +134,9 @@ export default async function BountyDetailPage({ params, searchParams }: Props) 
         ))}
       </nav>
 
-      {/* Tab content */}
       {validTab === "details" && (
         <DetailsTab
-          bounty={bounty}
+          bounty={{ ...bounty, org_name: orgName, rubric, resources, skills_required: bounty.skills_required ?? [] }}
           deadline={deadline}
           isParticipant={isParticipant}
           submission={mySubmission}
@@ -166,13 +145,13 @@ export default async function BountyDetailPage({ params, searchParams }: Props) 
       )}
 
       {validTab === "leaderboard" && (
-        <BountyLeaderboard bountyId={id} />
+        <BountyLeaderboard bountyId={id} page={Math.max(1, Number(leaderboard_page ?? 1))} />
       )}
 
       {validTab === "submissions" && isParticipant && (
         <SubmissionsTab
           bountyId={id}
-          submissions={myAllSubmissions ?? []}
+          submissions={myAllSubmissions}
           bountyStatus={bounty.status}
           submission={mySubmission}
         />
@@ -181,8 +160,6 @@ export default async function BountyDetailPage({ params, searchParams }: Props) 
   )
 }
 
-// ── Details tab ───────────────────────────────────────────────────────────────
-
 function DetailsTab({
   bounty,
   deadline,
@@ -190,15 +167,14 @@ function DetailsTab({
   submission,
   bountyId,
 }: {
-  bounty: Bounty
+  bounty: any
   deadline: string | null
   isParticipant: boolean
-  submission: Submission | null
+  submission: any
   bountyId: string
 }) {
   return (
     <div className="space-y-8">
-      {/* Dates bar */}
       <div className="flex gap-6 text-sm text-muted-foreground border rounded-lg p-4">
         <div>
           <p className="font-medium text-foreground">Start</p>
@@ -218,19 +194,13 @@ function DetailsTab({
         )}
       </div>
 
-      {/* CTA */}
       {isParticipant && (
         <div className="flex flex-wrap gap-3 items-center">
-          <SubmitCTA
-            bountyId={bountyId}
-            bountyStatus={bounty.status}
-            submission={submission}
-          />
-          <button className="rounded-md border px-6 py-2 text-sm hover:bg-muted">
-            Copy for AI
-          </button>
+          <SubmitCTA bountyId={bountyId} bountyStatus={bounty.status} submission={submission} />
+          <button className="rounded-md border px-6 py-2 text-sm hover:bg-muted">Copy for AI</button>
         </div>
       )}
+
       {bounty.description_md && (
         <section className="space-y-2">
           <h2 className="text-lg font-semibold">Description</h2>
@@ -253,7 +223,7 @@ function DetailsTab({
         <section className="space-y-2">
           <h2 className="text-lg font-semibold">Skills Required</h2>
           <ul className="list-disc list-inside text-sm space-y-1 text-muted-foreground">
-            {bounty.skills_required.map((s, i) => (
+            {bounty.skills_required.map((s: string, i: number) => (
               <li key={i}>{s}</li>
             ))}
           </ul>
@@ -263,7 +233,7 @@ function DetailsTab({
       <section className="space-y-2">
         <h2 className="text-lg font-semibold">Submission Format</h2>
         <div className="flex gap-2 flex-wrap">
-          {bounty.submission_formats.map((f) => (
+          {(bounty.submission_formats ?? []).map((f: string) => (
             <span key={f} className="rounded-md bg-secondary px-3 py-1 text-sm">
               {f === "zip" ? "Zip file" : f === "github_url" ? "GitHub URL" : "Drive URL"}
             </span>
@@ -283,7 +253,7 @@ function DetailsTab({
                 </tr>
               </thead>
               <tbody className="divide-y">
-                {bounty.rubric.map((row, i) => (
+                {bounty.rubric.map((row: RubricRow, i: number) => (
                   <tr key={i}>
                     <td className="px-4 py-2">{row.criterion}</td>
                     <td className="px-4 py-2 text-right">{row.max_points}</td>
@@ -292,7 +262,7 @@ function DetailsTab({
                 <tr className="bg-muted/30 font-medium">
                   <td className="px-4 py-2">Total</td>
                   <td className="px-4 py-2 text-right">
-                    {bounty.rubric.reduce((s, r) => s + r.max_points, 0)}
+                    {bounty.rubric.reduce((s: number, r: RubricRow) => s + r.max_points, 0)}
                   </td>
                 </tr>
               </tbody>
@@ -305,7 +275,7 @@ function DetailsTab({
         <section className="space-y-2">
           <h2 className="text-lg font-semibold">Resources</h2>
           <ul className="space-y-1">
-            {bounty.resources.map((r, i) => (
+            {bounty.resources.map((r: Resource, i: number) => (
               <li key={i}>
                 <a
                   href={r.url}
@@ -331,8 +301,6 @@ function DetailsTab({
   )
 }
 
-// ── My Submissions tab ────────────────────────────────────────────────────────
-
 function SubmissionsTab({
   bountyId,
   submissions,
@@ -340,9 +308,9 @@ function SubmissionsTab({
   submission,
 }: {
   bountyId: string
-  submissions: Submission[]
+  submissions: any[]
   bountyStatus: string
-  submission: Submission | null
+  submission: any
 }) {
   if (submissions.length === 0) {
     return (
@@ -359,12 +327,11 @@ function SubmissionsTab({
 
   return (
     <div className="space-y-4">
-      {/* Action row */}
       <div className="flex flex-wrap gap-3 items-center pb-2">
         <SubmitCTA bountyId={bountyId} bountyStatus={bountyStatus} submission={submission} />
       </div>
 
-      {submissions.map((sub) => {
+      {submissions.map((sub: any) => {
         const cfg = STATUS_CONFIG[sub.status] ?? STATUS_CONFIG.pending
         const pct =
           sub.total_score != null && sub.max_possible_score
@@ -373,12 +340,13 @@ function SubmissionsTab({
 
         return (
           <div key={sub.id} className="rounded-lg border p-4 space-y-3">
-            {/* Top row: attempt + date + status */}
             <div className="flex items-center justify-between flex-wrap gap-2">
               <div>
-                <span className="font-medium text-sm">Attempt #{sub.attempt_number}</span>
+                <span className="font-medium text-sm">Attempt #{sub.attempt_number ?? 1}</span>
                 <span className="text-xs text-muted-foreground ml-2">
-                  {new Date(sub.submitted_at).toLocaleDateString(undefined, { dateStyle: "medium" })}
+                  {sub.submitted_at
+                    ? new Date(sub.submitted_at).toLocaleDateString(undefined, { dateStyle: "medium" })
+                    : "—"}
                 </span>
               </div>
               <span
@@ -388,7 +356,6 @@ function SubmissionsTab({
               </span>
             </div>
 
-            {/* Score */}
             {sub.status === "scored" && sub.total_score != null && (
               <div className="space-y-1.5">
                 <div className="flex items-baseline justify-between text-sm">
@@ -399,22 +366,17 @@ function SubmissionsTab({
                   </span>
                 </div>
                 <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
-                  <div
-                    className="h-1.5 rounded-full bg-green-500"
-                    style={{ width: `${pct}%` }}
-                  />
+                  <div className="h-1.5 rounded-full bg-green-500" style={{ width: `${pct}%` }} />
                 </div>
               </div>
             )}
 
-            {/* Under review info */}
             {sub.status === "under_review" && (
               <p className="text-xs text-blue-700 bg-blue-50 border border-blue-200 rounded px-3 py-1.5">
                 Under review — score will appear here once grading is complete.
               </p>
             )}
 
-            {/* Rejection notes */}
             {sub.status === "rejected" && sub.review_notes && (
               <p className="text-xs text-destructive bg-destructive/5 border border-destructive/20 rounded px-3 py-1.5">
                 <span className="font-medium">Rejected: </span>
@@ -422,7 +384,6 @@ function SubmissionsTab({
               </p>
             )}
 
-            {/* Submission type + link */}
             <div className="flex items-center justify-between text-xs text-muted-foreground">
               <span className="capitalize">{sub.submission_type.replace("_", " ")}</span>
               <Link
@@ -439,8 +400,6 @@ function SubmissionsTab({
   )
 }
 
-// ── Submit CTA ────────────────────────────────────────────────────────────────
-
 function SubmitCTA({
   bountyId,
   bountyStatus,
@@ -448,7 +407,7 @@ function SubmitCTA({
 }: {
   bountyId: string
   bountyStatus: string
-  submission: Submission | null
+  submission: any
 }) {
   const primary =
     "rounded-md px-6 py-2 text-sm font-medium transition-colors bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed"

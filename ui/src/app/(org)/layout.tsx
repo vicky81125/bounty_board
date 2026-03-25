@@ -1,14 +1,17 @@
 import { redirect } from "next/navigation"
-import { getServerSession } from "@/lib/server-auth"
+import { createClient } from "@/lib/supabase/server"
 
-/**
- * Auth guard for all (org) routes.
- * Does NOT render OrgShell — each sub-layout provides its own shell with
- * the correct orgId context (or none for flat placeholder routes).
- */
 export default async function OrgLayout({ children }: { children: React.ReactNode }) {
-  const session = await getServerSession()
-  if (!session) redirect("/login")
-  if (session.user.account_type === "participant") redirect("/dashboard")
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect("/login")
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("account_type")
+    .eq("id", user.id)
+    .single()
+
+  if (!profile || profile.account_type === "participant") redirect("/dashboard")
   return <>{children}</>
 }

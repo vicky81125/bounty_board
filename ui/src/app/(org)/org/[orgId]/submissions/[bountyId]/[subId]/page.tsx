@@ -1,32 +1,9 @@
 import Link from "next/link"
 import { notFound } from "next/navigation"
-import { serverFetch } from "@/lib/server-api"
+import { getSubmission } from "@/app/actions/queries/submissions"
+import { getBounty } from "@/app/actions/queries/bounties"
 import { DownloadZipButton } from "./download-zip-button"
 import { SubmissionStatusActions } from "../submission-status-actions"
-
-interface Submission {
-  id: string
-  bounty_id: string
-  user_display_name: string
-  user_email: string
-  submission_type: "zip" | "github_url" | "drive_url"
-  status: string
-  external_url: string | null
-  file_path: string | null
-  description: string
-  attempt_number: number
-  review_notes: string | null
-  submitted_at: string | null
-  reviewed_at: string | null
-  total_score: number | null
-  max_possible_score: number | null
-}
-
-interface Bounty {
-  id: string
-  title: string
-  rubric: { criterion: string; max_points: number }[]
-}
 
 interface Props {
   params: Promise<{ orgId: string; bountyId: string; subId: string }>
@@ -42,15 +19,17 @@ const statusColors: Record<string, string> = {
 export default async function SubmissionDetailPage({ params }: Props) {
   const { orgId, bountyId, subId } = await params
 
-  const [submission, bounty] = await Promise.all([
-    serverFetch<Submission>(
-      `/orgs/${orgId}/bounties/${bountyId}/submissions`,
-      { noCache: true }
-    ).then((list) => (list as Submission[] | null)?.find((s) => s.id === subId) ?? null),
-    serverFetch<Bounty>(`/bounties/${bountyId}`),
+  const [submissionResult, bountyResult] = await Promise.all([
+    getSubmission(subId, orgId),
+    getBounty(bountyId),
   ])
 
-  if (!submission || !bounty) notFound()
+  if (submissionResult.error || !submissionResult.data) notFound()
+  if (bountyResult.error || !bountyResult.data) notFound()
+
+  const submission = submissionResult.data as any
+  const bounty = bountyResult.data as any
+  const rubric: { criterion: string; max_points: number }[] = bounty.rubric ?? []
 
   return (
     <div className="space-y-6">
@@ -70,8 +49,8 @@ export default async function SubmissionDetailPage({ params }: Props) {
           <div className="rounded-lg border p-4 space-y-3">
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-medium">{submission.user_display_name}</p>
-                <p className="text-xs text-muted-foreground">{submission.user_email}</p>
+                <p className="font-medium">{submission.profiles?.display_name ?? "—"}</p>
+                <p className="text-xs text-muted-foreground">{submission.profiles?.email ?? ""}</p>
               </div>
               <span
                 className={`rounded-full px-3 py-1 text-xs font-medium capitalize ${
@@ -82,9 +61,7 @@ export default async function SubmissionDetailPage({ params }: Props) {
               </span>
             </div>
             <div className="flex gap-4 text-xs text-muted-foreground">
-              <span>
-                Attempt #{submission.attempt_number}
-              </span>
+              <span>Attempt #{submission.attempt_number ?? 1}</span>
               <span>
                 Submitted:{" "}
                 {submission.submitted_at
@@ -100,7 +77,6 @@ export default async function SubmissionDetailPage({ params }: Props) {
             </div>
           </div>
 
-          {/* Submission file / URL */}
           <div className="rounded-lg border p-4 space-y-3">
             <h2 className="font-semibold text-sm">Submission</h2>
             {submission.submission_type === "zip" ? (
@@ -117,7 +93,6 @@ export default async function SubmissionDetailPage({ params }: Props) {
             )}
           </div>
 
-          {/* Description */}
           <div className="rounded-lg border p-4 space-y-2">
             <h2 className="font-semibold text-sm">Description</h2>
             <p className="text-sm whitespace-pre-wrap text-muted-foreground">
@@ -125,7 +100,6 @@ export default async function SubmissionDetailPage({ params }: Props) {
             </p>
           </div>
 
-          {/* Review notes */}
           {submission.review_notes && (
             <div className="rounded-lg border border-destructive/30 p-4 space-y-2">
               <h2 className="font-semibold text-sm text-destructive">Rejection Notes</h2>
@@ -145,12 +119,11 @@ export default async function SubmissionDetailPage({ params }: Props) {
             />
           </div>
 
-          {/* Rubric — read-only preview */}
-          {bounty.rubric.length > 0 && (
+          {rubric.length > 0 && (
             <div className="rounded-lg border p-4 space-y-3">
               <h2 className="font-semibold text-sm">Rubric</h2>
               <ul className="space-y-1.5 text-sm">
-                {bounty.rubric.map((r, i) => (
+                {rubric.map((r, i) => (
                   <li key={i} className="flex items-center justify-between">
                     <span className="text-muted-foreground">{r.criterion}</span>
                     <span className="font-medium tabular-nums">{r.max_points} pts</span>
@@ -158,7 +131,7 @@ export default async function SubmissionDetailPage({ params }: Props) {
                 ))}
                 <li className="flex items-center justify-between border-t pt-1.5 font-medium">
                   <span>Total</span>
-                  <span>{bounty.rubric.reduce((s, r) => s + r.max_points, 0)} pts</span>
+                  <span>{rubric.reduce((s, r) => s + r.max_points, 0)} pts</span>
                 </li>
               </ul>
 

@@ -1,29 +1,9 @@
 import Link from "next/link"
 import { redirect } from "next/navigation"
-import { serverFetch } from "@/lib/server-api"
-import { getServerSession } from "@/lib/server-auth"
+import { createClient } from "@/lib/supabase/server"
+import { getBounty } from "@/app/actions/queries/bounties"
+import { getMySubmission } from "@/app/actions/queries/submissions"
 import { EditSubmissionForm } from "./edit-submission-form"
-
-interface Submission {
-  id: string
-  bounty_id: string
-  status: "pending" | "under_review" | "scored" | "rejected"
-  submission_type: "zip" | "github_url" | "drive_url"
-  external_url: string | null
-  description: string
-  attempt_number: number
-  review_notes: string | null
-  submitted_at: string
-  total_score: number | null
-  max_possible_score: number | null
-}
-
-interface Bounty {
-  id: string
-  title: string
-  status: string
-  submission_formats: ("zip" | "github_url" | "drive_url")[]
-}
 
 interface Props {
   params: Promise<{ id: string }>
@@ -34,22 +14,33 @@ const statusConfig = {
   under_review: { label: "Under Review", color: "bg-blue-100 text-blue-800" },
   scored: { label: "Scored", color: "bg-green-100 text-green-800" },
   rejected: { label: "Rejected", color: "bg-red-100 text-red-800" },
-}
+} as const
 
 export default async function MySubmissionPage({ params }: Props) {
   const { id } = await params
-  const session = await getServerSession()
-  if (!session) redirect("/login")
-  if (session.user.account_type !== "participant") redirect("/org/dashboard")
 
-  const [bounty, submission] = await Promise.all([
-    serverFetch<Bounty>(`/bounties/${id}`),
-    serverFetch<Submission>(`/bounties/${id}/submissions/mine`, { noCache: true }),
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect("/login")
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("account_type")
+    .eq("id", user.id)
+    .single()
+
+  if (!profile || profile.account_type !== "participant") redirect("/org/dashboard")
+
+  const [bountyResult, submissionResult] = await Promise.all([
+    getBounty(id),
+    getMySubmission(id),
   ])
 
-  if (!bounty) redirect(`/bounties`)
+  if (bountyResult.error || !bountyResult.data) redirect("/bounties")
 
-  // No submission: redirect to submit if open, else show empty state
+  const bounty = bountyResult.data as any
+  const submission = submissionResult.data as any ?? null
+
   if (!submission) {
     if (bounty.status === "open") redirect(`/bounties/${id}/submit`)
     return (
@@ -63,15 +54,17 @@ export default async function MySubmissionPage({ params }: Props) {
     )
   }
 
-  const cfg = statusConfig[submission.status] ?? statusConfig.pending
+  const cfg = statusConfig[submission.status as keyof typeof statusConfig] ?? statusConfig.pending
 
   return (
     <div className="max-w-xl mx-auto space-y-6">
       <div>
         <h1 className="text-2xl font-bold">{bounty.title}</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Attempt #{submission.attempt_number} ·{" "}
-          {new Date(submission.submitted_at).toLocaleDateString(undefined, { dateStyle: "medium" })}
+          Attempt #{submission.attempt_number ?? 1} ·{" "}
+          {submission.submitted_at
+            ? new Date(submission.submitted_at).toLocaleDateString(undefined, { dateStyle: "medium" })
+            : "—"}
         </p>
       </div>
 
@@ -84,7 +77,6 @@ export default async function MySubmissionPage({ params }: Props) {
         </span>
       </div>
 
-      {/* Score result */}
       {submission.status === "scored" && submission.total_score != null && (
         <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-4 space-y-2">
           <p className="text-sm font-semibold text-green-900">Your Score</p>
@@ -114,14 +106,12 @@ export default async function MySubmissionPage({ params }: Props) {
         </div>
       )}
 
-      {/* Under review notice */}
       {submission.status === "under_review" && (
         <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
           Your submission is being reviewed. You will see your score here once grading is complete.
         </div>
       )}
 
-      {/* Rejection notes */}
       {submission.status === "rejected" && submission.review_notes && (
         <div className="rounded-md bg-destructive/10 border border-destructive/30 px-4 py-3 text-sm">
           <p className="font-medium text-destructive mb-1">Rejection reason</p>
@@ -129,7 +119,6 @@ export default async function MySubmissionPage({ params }: Props) {
         </div>
       )}
 
-      {/* Submission content */}
       <section className="space-y-2">
         {submission.submission_type !== "zip" && submission.external_url && (
           <div>
@@ -154,7 +143,6 @@ export default async function MySubmissionPage({ params }: Props) {
         </div>
       </section>
 
-      {/* Editable only when pending */}
       {submission.status === "pending" && (
         <EditSubmissionForm
           bountyId={id}
@@ -166,7 +154,6 @@ export default async function MySubmissionPage({ params }: Props) {
         />
       )}
 
-      {/* Submit Again after rejection */}
       {submission.status === "rejected" && bounty.status === "open" && (
         <Link
           href={`/bounties/${id}/submit`}

@@ -1,8 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
-import { apiRequest } from "@/lib/api"
+import { scoreSubmission, overrideScore } from "@/app/actions/mutations/scoring"
 
 interface CriterionScore {
   criterion: string
@@ -35,26 +35,20 @@ export function ScoreForm({
   isAdmin,
 }: Props) {
   const router = useRouter()
+  const [isPending, startTransition] = useTransition()
 
   const initialScores = rubric.map((r) => {
     const existing = existingScore?.criteria_scores.find(
       (cs) => cs.criterion === r.criterion
     )
-    return {
-      criterion: r.criterion,
-      max_points: r.max_points,
-      score: existing?.score ?? 0,
-    }
+    return { criterion: r.criterion, max_points: r.max_points, score: existing?.score ?? 0 }
   })
 
-  const [scores, setScores] = useState<{ criterion: string; max_points: number; score: number }[]>(initialScores)
+  const [scores, setScores] = useState(initialScores)
   const [notes, setNotes] = useState(existingScore?.notes ?? "")
-  const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const isOverride = isAdmin && existingScore !== null
-  const title = isOverride ? "Override Score" : "Rubric Scoring"
-
   const totalScore = scores.reduce((sum, s) => sum + (Number(s.score) || 0), 0)
   const maxPossible = rubric.reduce((sum, r) => sum + r.max_points, 0)
   const percentage = maxPossible > 0 ? Math.min(100, (totalScore / maxPossible) * 100) : 0
@@ -67,51 +61,45 @@ export function ScoreForm({
     })
   }
 
-  async function handleSubmit(e: React.FormEvent) {
+  function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
-    setSubmitting(true)
 
-    try {
-      const body = {
-        criteria_scores: scores.map((s) => ({
-          criterion: s.criterion,
-          score: Number(s.score),
-        })),
-        notes: notes.trim() || null,
-      }
+    const criteriaScores = scores.map((s) => ({
+      criterion: s.criterion,
+      score: Number(s.score),
+      max_points: s.max_points,
+    }))
 
-      const method = existingScore ? "PATCH" : "POST"
-      await apiRequest(`/orgs/${orgId}/submissions/${submissionId}/score`, {
-        method,
-        body: JSON.stringify(body),
+    startTransition(async () => {
+      const action = isOverride ? overrideScore : scoreSubmission
+      const result = await action({
+        submissionId,
+        orgId,
+        criteriaScores,
+        notes: notes.trim() || undefined,
       })
 
-      router.push(`/org/${orgId}/submissions/${bountyId}/${submissionId}`)
-    } catch (err: unknown) {
-      const message =
-        err instanceof Error ? err.message : "Failed to save score. Please try again."
-      setError(message)
-    } finally {
-      setSubmitting(false)
-    }
+      if (result?.error) {
+        setError(result.error)
+      } else {
+        router.push(`/org/${orgId}/submissions/${bountyId}/${submissionId}`)
+      }
+    })
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6 max-w-2xl">
       <div className="rounded-lg border p-5 space-y-5">
-        <h2 className="font-semibold">{title}</h2>
+        <h2 className="font-semibold">{isOverride ? "Override Score" : "Rubric Scoring"}</h2>
 
-        {/* Criterion inputs */}
         <div className="space-y-4">
           {rubric.map((r, i) => {
             const current = Number(scores[i]?.score ?? 0)
             const isOverMax = current > r.max_points
             return (
               <div key={r.criterion} className="flex items-center gap-4">
-                <label className="flex-1 text-sm text-muted-foreground">
-                  {r.criterion}
-                </label>
+                <label className="flex-1 text-sm text-muted-foreground">{r.criterion}</label>
                 <div className="flex items-center gap-2 shrink-0">
                   <input
                     type="number"
@@ -121,9 +109,7 @@ export function ScoreForm({
                     value={scores[i]?.score ?? 0}
                     onChange={(e) => handleScoreChange(i, e.target.value)}
                     className={`w-20 rounded-md border px-2 py-1 text-sm text-right focus:outline-none focus:ring-2 focus:ring-primary ${
-                      isOverMax
-                        ? "border-red-500 focus:ring-red-500"
-                        : "border-input"
+                      isOverMax ? "border-red-500 focus:ring-red-500" : "border-input"
                     }`}
                   />
                   <span className="text-sm text-muted-foreground w-16 text-right">
@@ -135,7 +121,6 @@ export function ScoreForm({
           })}
         </div>
 
-        {/* Running total */}
         <div className="border-t pt-4 space-y-3">
           <div className="flex items-center justify-between text-sm font-medium">
             <span>Total</span>
@@ -143,27 +128,18 @@ export function ScoreForm({
               {totalScore} / {maxPossible}
             </span>
           </div>
-
-          {/* Progress bar */}
           <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
             <div
               className={`h-2 rounded-full transition-all ${
-                percentage >= 80
-                  ? "bg-green-500"
-                  : percentage >= 50
-                  ? "bg-amber-500"
-                  : "bg-red-500"
+                percentage >= 80 ? "bg-green-500" : percentage >= 50 ? "bg-amber-500" : "bg-red-500"
               }`}
               style={{ width: `${Math.min(percentage, 100)}%` }}
             />
           </div>
-          <p className="text-xs text-muted-foreground text-right">
-            {percentage.toFixed(1)}%
-          </p>
+          <p className="text-xs text-muted-foreground text-right">{percentage.toFixed(1)}%</p>
         </div>
       </div>
 
-      {/* Notes */}
       <div className="space-y-2">
         <label className="text-sm font-medium">Notes (optional)</label>
         <textarea
@@ -183,10 +159,10 @@ export function ScoreForm({
 
       <button
         type="submit"
-        disabled={submitting || scores.some((s) => Number(s.score) > s.max_points)}
+        disabled={isPending || scores.some((s) => Number(s.score) > s.max_points)}
         className="rounded-md bg-primary px-5 py-2 text-sm font-medium text-primary-foreground transition-opacity disabled:opacity-50 hover:opacity-90"
       >
-        {submitting ? "Saving..." : isOverride ? "Override Score" : "Save Score"}
+        {isPending ? "Saving..." : isOverride ? "Override Score" : "Save Score"}
       </button>
     </form>
   )

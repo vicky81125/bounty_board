@@ -1,19 +1,7 @@
 import Link from "next/link"
 import { notFound } from "next/navigation"
-import { serverFetch } from "@/lib/server-api"
+import { getOrgSubmissions } from "@/app/actions/queries/submissions"
 import { SubmissionStatusActions } from "./submission-status-actions"
-
-interface Submission {
-  id: string
-  user_display_name: string
-  user_email: string
-  submission_type: "zip" | "github_url" | "drive_url"
-  status: string
-  attempt_number: number
-  submitted_at: string | null
-  total_score: number | null
-  max_possible_score: number | null
-}
 
 interface Props {
   params: Promise<{ orgId: string; bountyId: string }>
@@ -39,12 +27,9 @@ export default async function BountySubmissionsPage({ params, searchParams }: Pr
   const { orgId, bountyId } = await params
   const { status } = await searchParams
 
-  const url = status
-    ? `/orgs/${orgId}/bounties/${bountyId}/submissions?status_filter=${status}`
-    : `/orgs/${orgId}/bounties/${bountyId}/submissions`
-
-  const submissions = await serverFetch<Submission[]>(url, { noCache: true })
-  if (submissions === null) notFound()
+  const result = await getOrgSubmissions(bountyId, orgId, status)
+  if (result.error) notFound()
+  const submissions = result.data ?? []
 
   return (
     <div className="space-y-6">
@@ -60,13 +45,11 @@ export default async function BountySubmissionsPage({ params, searchParams }: Pr
         </div>
       </div>
 
-      {/* Status filter tabs */}
       <div className="flex gap-1 border-b">
         {STATUS_TABS.map((tab) => {
-          const href =
-            tab.value
-              ? `/org/${orgId}/submissions/${bountyId}?status=${tab.value}`
-              : `/org/${orgId}/submissions/${bountyId}`
+          const href = tab.value
+            ? `/org/${orgId}/submissions/${bountyId}?status=${tab.value}`
+            : `/org/${orgId}/submissions/${bountyId}`
           const active = status === tab.value || (!status && !tab.value)
           return (
             <Link
@@ -100,11 +83,11 @@ export default async function BountySubmissionsPage({ params, searchParams }: Pr
               </tr>
             </thead>
             <tbody className="divide-y">
-              {submissions.map((sub) => (
+              {submissions.map((sub: any) => (
                 <tr key={sub.id} className="hover:bg-muted/20">
                   <td className="px-4 py-3">
-                    <p className="font-medium">{sub.user_display_name}</p>
-                    <p className="text-xs text-muted-foreground">{sub.user_email}</p>
+                    <p className="font-medium">{sub.profiles?.display_name ?? "—"}</p>
+                    <p className="text-xs text-muted-foreground">{sub.profiles?.email ?? ""}</p>
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">
                     {sub.submitted_at

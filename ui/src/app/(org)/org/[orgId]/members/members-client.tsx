@@ -1,8 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
-import { apiRequest } from "@/lib/api"
+import { inviteMember, updateMemberRole, removeMember } from "@/app/actions/mutations/orgs"
 
 interface Member {
   user_id: string
@@ -20,51 +20,42 @@ interface Props {
 
 export function MembersClient({ members, orgId, currentUserId }: Props) {
   const router = useRouter()
+  const [isPending, startTransition] = useTransition()
   const [showInvite, setShowInvite] = useState(false)
   const [inviteEmail, setInviteEmail] = useState("")
   const [inviteRole, setInviteRole] = useState<"admin" | "moderator">("moderator")
   const [inviteError, setInviteError] = useState<string | null>(null)
-  const [inviting, setInviting] = useState(false)
 
-  async function handleInvite(e: React.FormEvent) {
+  function handleInvite(e: React.FormEvent) {
     e.preventDefault()
     setInviteError(null)
-    setInviting(true)
-    try {
-      await apiRequest(`/orgs/${orgId}/members`, {
-        method: "POST",
-        body: JSON.stringify({ email: inviteEmail, role: inviteRole }),
-      })
-      setInviteEmail("")
-      setShowInvite(false)
-      router.refresh()
-    } catch (err: any) {
-      setInviteError(err?.body?.detail ?? "Failed to invite member")
-    } finally {
-      setInviting(false)
-    }
+    startTransition(async () => {
+      const result = await inviteMember(orgId, inviteEmail, inviteRole)
+      if (result?.error) {
+        setInviteError(result.error)
+      } else {
+        setInviteEmail("")
+        setShowInvite(false)
+        router.refresh()
+      }
+    })
   }
 
-  async function handleRoleChange(userId: string, newRole: "admin" | "moderator") {
-    try {
-      await apiRequest(`/orgs/${orgId}/members/${userId}`, {
-        method: "PATCH",
-        body: JSON.stringify({ role: newRole }),
-      })
-      router.refresh()
-    } catch (err: any) {
-      alert(err?.body?.detail ?? "Failed to update role")
-    }
+  function handleRoleChange(userId: string, newRole: "admin" | "moderator") {
+    startTransition(async () => {
+      const result = await updateMemberRole(orgId, userId, newRole)
+      if (result?.error) alert(result.error)
+      else router.refresh()
+    })
   }
 
-  async function handleRemove(userId: string, name: string) {
+  function handleRemove(userId: string, name: string) {
     if (!confirm(`Remove ${name} from this org? They will lose access immediately.`)) return
-    try {
-      await apiRequest(`/orgs/${orgId}/members/${userId}`, { method: "DELETE" })
-      router.refresh()
-    } catch (err: any) {
-      alert(err?.body?.detail ?? "Failed to remove member")
-    }
+    startTransition(async () => {
+      const result = await removeMember(orgId, userId)
+      if (result?.error) alert(result.error)
+      else router.refresh()
+    })
   }
 
   return (
@@ -78,14 +69,11 @@ export function MembersClient({ members, orgId, currentUserId }: Props) {
         </button>
       </div>
 
-      {/* Invite modal */}
       {showInvite && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="bg-background rounded-lg border shadow-lg p-6 w-full max-w-sm space-y-4">
             <h2 className="text-lg font-semibold">Invite Member</h2>
-            {inviteError && (
-              <p className="text-sm text-destructive">{inviteError}</p>
-            )}
+            {inviteError && <p className="text-sm text-destructive">{inviteError}</p>}
             <form onSubmit={handleInvite} className="space-y-3">
               <div className="space-y-1">
                 <label className="text-sm font-medium">Email</label>
@@ -118,10 +106,10 @@ export function MembersClient({ members, orgId, currentUserId }: Props) {
               <div className="flex gap-2 pt-1">
                 <button
                   type="submit"
-                  disabled={inviting}
+                  disabled={isPending}
                   className="flex-1 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
                 >
-                  {inviting ? "Inviting…" : "Invite"}
+                  {isPending ? "Inviting…" : "Invite"}
                 </button>
                 <button
                   type="button"
@@ -136,7 +124,6 @@ export function MembersClient({ members, orgId, currentUserId }: Props) {
         </div>
       )}
 
-      {/* Members table */}
       <div className="rounded-lg border overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-muted/50">
@@ -156,10 +143,9 @@ export function MembersClient({ members, orgId, currentUserId }: Props) {
                 <td className="px-4 py-3">
                   <select
                     value={m.role}
-                    onChange={(e) =>
-                      handleRoleChange(m.user_id, e.target.value as "admin" | "moderator")
-                    }
-                    className="rounded border px-2 py-1 text-xs bg-background"
+                    onChange={(e) => handleRoleChange(m.user_id, e.target.value as "admin" | "moderator")}
+                    disabled={isPending}
+                    className="rounded border px-2 py-1 text-xs bg-background disabled:opacity-50"
                   >
                     <option value="admin">Admin</option>
                     <option value="moderator">Moderator</option>
@@ -172,7 +158,8 @@ export function MembersClient({ members, orgId, currentUserId }: Props) {
                   {m.user_id !== currentUserId && (
                     <button
                       onClick={() => handleRemove(m.user_id, m.display_name)}
-                      className="text-xs text-destructive hover:underline"
+                      disabled={isPending}
+                      className="text-xs text-destructive hover:underline disabled:opacity-50"
                     >
                       Remove
                     </button>

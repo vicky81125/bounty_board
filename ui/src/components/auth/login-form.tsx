@@ -1,12 +1,11 @@
 "use client"
 
-import { useState } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useState, useTransition } from "react"
+import { useSearchParams } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
-import { useAuth } from "@/providers/auth-provider"
-import { ApiError } from "@/lib/api"
+import { signIn } from "@/app/actions/mutations/auth"
 
 const schema = z.object({
   email: z.string().email("Enter a valid email"),
@@ -16,38 +15,24 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>
 
 export function LoginForm() {
-  const { signIn } = useAuth()
-  const router = useRouter()
   const searchParams = useSearchParams()
   const [serverError, setServerError] = useState<string | null>(null)
+  const [isPending, startTransition] = useTransition()
 
   const {
     register,
     handleSubmit,
-    formState: { errors, isSubmitting },
+    formState: { errors },
   } = useForm<FormValues>({ resolver: zodResolver(schema) })
 
-  async function onSubmit(data: FormValues) {
+  function onSubmit(data: FormValues) {
     setServerError(null)
-    try {
-      const result = await signIn(data.email, data.password)
-
-      const nextParam = searchParams.get("next")
-      const safePath =
-        nextParam && nextParam.startsWith("/") && !nextParam.startsWith("//")
-          ? nextParam
-          : null
-
-      const defaultRedirect =
-        result.user.account_type === "organizer" ? "/org/dashboard" : "/dashboard"
-      router.push(safePath ?? defaultRedirect)
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 401) {
-        setServerError("Invalid email or password")
-      } else {
-        setServerError("Something went wrong. Please try again.")
-      }
-    }
+    const next = searchParams.get("next") ?? undefined
+    startTransition(async () => {
+      const result = await signIn(data.email, data.password, next)
+      if (result?.error) setServerError(result.error)
+      // On success, signIn() calls redirect() server-side — navigation is automatic
+    })
   }
 
   return (
@@ -88,10 +73,10 @@ export function LoginForm() {
 
       <button
         type="submit"
-        disabled={isSubmitting}
+        disabled={isPending}
         className="w-full inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 transition-colors"
       >
-        {isSubmitting ? "Signing in…" : "Sign in"}
+        {isPending ? "Signing in…" : "Sign in"}
       </button>
     </form>
   )

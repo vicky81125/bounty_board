@@ -1,48 +1,9 @@
 import Link from "next/link"
 import { notFound } from "next/navigation"
-import { serverFetch } from "@/lib/server-api"
+import { getSubmission } from "@/app/actions/queries/submissions"
+import { getBounty } from "@/app/actions/queries/bounties"
+import { requireOrgMember } from "@/app/actions/_auth"
 import { ScoreForm } from "./score-form"
-
-interface Submission {
-  id: string
-  bounty_id: string
-  user_display_name: string
-  user_email: string
-  submission_type: "zip" | "github_url" | "drive_url"
-  status: string
-  attempt_number: number
-  submitted_at: string | null
-  total_score: number | null
-  max_possible_score: number | null
-}
-
-interface Bounty {
-  id: string
-  title: string
-  rubric: { criterion: string; max_points: number }[]
-}
-
-interface CriterionScore {
-  criterion: string
-  max_points: number
-  score: number
-}
-
-interface ExistingScore {
-  criteria_scores: CriterionScore[]
-  total_score: number
-  max_possible_score: number
-  notes: string | null
-}
-
-interface OrgMember {
-  user_id: string
-  role: "admin" | "moderator" | "member"
-}
-
-interface CurrentUser {
-  id: string
-}
 
 interface Props {
   params: Promise<{ orgId: string; bountyId: string; subId: string }>
@@ -51,22 +12,22 @@ interface Props {
 export default async function ScorePage({ params }: Props) {
   const { orgId, bountyId, subId } = await params
 
-  const [submission, bounty, existingScore, members, me] = await Promise.all([
-    serverFetch<Submission[]>(
-      `/orgs/${orgId}/bounties/${bountyId}/submissions`,
-      { noCache: true }
-    ).then((list) => (list as Submission[] | null)?.find((s) => s.id === subId) ?? null),
-    serverFetch<Bounty>(`/bounties/${bountyId}`),
-    serverFetch<ExistingScore>(`/orgs/${orgId}/submissions/${subId}/score`, { noCache: true }),
-    serverFetch<OrgMember[]>(`/orgs/${orgId}/members`, { noCache: true }),
-    serverFetch<CurrentUser>(`/identity/me`, { noCache: true }),
+  const [auth, submissionResult, bountyResult] = await Promise.all([
+    requireOrgMember(orgId),
+    getSubmission(subId, orgId),
+    getBounty(bountyId),
   ])
 
-  if (!submission || !bounty) notFound()
+  if (!auth.ok) notFound()
+  if (submissionResult.error || !submissionResult.data) notFound()
+  if (bountyResult.error || !bountyResult.data) notFound()
 
-  const isAdmin = (members ?? []).some(
-    (m) => m.user_id === me?.id && m.role === "admin"
-  )
+  const submission = submissionResult.data as any
+  const bounty = bountyResult.data as any
+  const isAdmin = auth.memberRole === "admin"
+
+  // Existing score comes from the joined submission_scores array
+  const existingScore = submission.submission_scores?.[0] ?? null
 
   if (submission.status !== "under_review" && submission.status !== "scored") {
     return (
@@ -106,7 +67,7 @@ export default async function ScorePage({ params }: Props) {
           {existingScore ? "Override Score" : "Score Submission"}
         </h1>
         <p className="text-sm text-muted-foreground mt-1">
-          {submission.user_display_name} — {bounty.title}
+          {submission.profiles?.display_name ?? "—"} — {bounty.title}
         </p>
       </div>
 
@@ -114,7 +75,7 @@ export default async function ScorePage({ params }: Props) {
         orgId={orgId}
         bountyId={bountyId}
         submissionId={subId}
-        rubric={bounty.rubric}
+        rubric={bounty.rubric ?? []}
         existingScore={existingScore}
         isAdmin={isAdmin}
       />

@@ -1,15 +1,6 @@
-import { serverFetch } from "@/lib/server-api"
+import { getOrgBounties } from "@/app/actions/queries/bounties"
 import Link from "next/link"
 import { OrgDashboardClient } from "./dashboard-client"
-
-interface Bounty {
-  id: string
-  title: string
-  status: "draft" | "open" | "closed"
-  difficulty: string
-  end_date: string | null
-  created_at: string
-}
 
 interface Props {
   params: Promise<{ orgId: string }>
@@ -21,13 +12,17 @@ export default async function OrgDashboardPage({ params, searchParams }: Props) 
   const { status: statusFilter } = await searchParams
 
   const activeTab = (["all", "draft", "open", "closed"] as const).includes(
-    statusFilter as any
+    statusFilter as "all" | "draft" | "open" | "closed"
   )
     ? (statusFilter as string)
     : "all"
 
-  const qs = activeTab !== "all" ? `?status=${activeTab}` : ""
-  const bounties = (await serverFetch<Bounty[]>(`/orgs/${orgId}/bounties${qs}`)) ?? []
+  const result = await getOrgBounties(orgId)
+  const allBounties = result.data ?? []
+  const bounties =
+    activeTab === "all"
+      ? allBounties
+      : allBounties.filter((b: any) => b.status === activeTab)
 
   return (
     <div className="space-y-6">
@@ -41,13 +36,12 @@ export default async function OrgDashboardPage({ params, searchParams }: Props) 
         </Link>
       </div>
 
-      {/* Quick stats */}
       <div className="grid grid-cols-3 gap-4">
         {(["Total", "Open", "Draft"] as const).map((label) => {
           const count =
             label === "Total"
-              ? bounties.length
-              : bounties.filter((b) => b.status === label.toLowerCase()).length
+              ? allBounties.length
+              : allBounties.filter((b: any) => b.status === label.toLowerCase()).length
           return (
             <div key={label} className="rounded-lg border p-4 text-center">
               <p className="text-2xl font-bold">{count}</p>

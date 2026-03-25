@@ -1,18 +1,5 @@
-import { serverFetch } from "@/lib/server-api"
+import { getOrgBounties } from "@/app/actions/queries/bounties"
 import Link from "next/link"
-
-interface Bounty {
-  id: string
-  title: string
-  status: "draft" | "open" | "closed"
-  difficulty: string
-  end_date: string | null
-  created_at: string
-}
-
-interface Props {
-  params: Promise<{ orgId: string }>
-}
 
 const statusColors: Record<string, string> = {
   draft: "bg-muted text-muted-foreground",
@@ -20,9 +7,14 @@ const statusColors: Record<string, string> = {
   closed: "bg-gray-100 text-gray-600",
 }
 
+interface Props {
+  params: Promise<{ orgId: string }>
+}
+
 export default async function OrgBountiesPage({ params }: Props) {
   const { orgId } = await params
-  const bounties = (await serverFetch<Bounty[]>(`/orgs/${orgId}/bounties`)) ?? []
+  const result = await getOrgBounties(orgId)
+  const bounties = result.data ?? []
 
   return (
     <div className="space-y-6">
@@ -42,7 +34,7 @@ export default async function OrgBountiesPage({ params }: Props) {
         </div>
       ) : (
         <div className="space-y-2">
-          {bounties.map((b) => (
+          {bounties.map((b: any) => (
             <div
               key={b.id}
               className="flex items-center justify-between rounded-lg border px-4 py-3 hover:bg-muted/30"

@@ -1,11 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
-import { apiRequest } from "@/lib/api"
+import { createOrg } from "@/app/actions/mutations/orgs"
 
 const schema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters").max(80),
@@ -29,7 +29,7 @@ function toSlug(name: string): string {
 export default function NewOrgPage() {
   const router = useRouter()
   const [apiError, setApiError] = useState<string | null>(null)
-  const [submitting, setSubmitting] = useState(false)
+  const [isPending, startTransition] = useTransition()
 
   const {
     register,
@@ -45,21 +45,16 @@ export default function NewOrgPage() {
     setValue("slug", toSlug(name))
   }
 
-  async function onSubmit(data: FormData) {
+  function onSubmit(data: FormData) {
     setApiError(null)
-    setSubmitting(true)
-    try {
-      const org = await apiRequest<{ id: string }>("/orgs", {
-        method: "POST",
-        body: JSON.stringify(data),
-      })
-      router.push(`/org/${org.id}/dashboard`)
-    } catch (err: any) {
-      const detail = err?.body?.detail ?? "Failed to create organisation"
-      setApiError(typeof detail === "string" ? detail : "Failed to create organisation")
-    } finally {
-      setSubmitting(false)
-    }
+    startTransition(async () => {
+      const result = await createOrg({ name: data.name, slug: data.slug })
+      if (result?.error) {
+        setApiError(result.error)
+      } else if (result?.data) {
+        router.push(`/org/${result.data.id}/dashboard`)
+      }
+    })
   }
 
   return (
@@ -113,10 +108,10 @@ export default function NewOrgPage() {
 
           <button
             type="submit"
-            disabled={submitting}
+            disabled={isPending}
             className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
           >
-            {submitting ? "Creating…" : "Create Organisation"}
+            {isPending ? "Creating…" : "Create Organisation"}
           </button>
         </form>
       </div>

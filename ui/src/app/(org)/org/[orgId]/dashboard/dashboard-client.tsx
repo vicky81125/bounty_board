@@ -2,7 +2,8 @@
 
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { apiRequest } from "@/lib/api"
+import { useTransition } from "react"
+import { changeBountyStatus, deleteBounty } from "@/app/actions/mutations/bounties"
 
 interface Bounty {
   id: string
@@ -29,37 +30,32 @@ const statusColors: Record<string, string> = {
 
 export function OrgDashboardClient({ bounties, orgId, activeTab }: Props) {
   const router = useRouter()
+  const [isPending, startTransition] = useTransition()
 
-  async function changeStatus(bountyId: string, newStatus: "open" | "closed") {
+  function changeStatus(bountyId: string, newStatus: "open" | "closed") {
     const msg =
       newStatus === "open"
         ? "Open this bounty? It will be visible to all users."
         : "Close this bounty? Submissions will no longer be accepted."
     if (!confirm(msg)) return
-    try {
-      await apiRequest(`/orgs/${orgId}/bounties/${bountyId}/status`, {
-        method: "PATCH",
-        body: JSON.stringify({ status: newStatus }),
-      })
-      router.refresh()
-    } catch {
-      alert("Failed to update status. Please try again.")
-    }
+    startTransition(async () => {
+      const result = await changeBountyStatus(bountyId, orgId, newStatus)
+      if (result?.error) alert(result.error)
+      else router.refresh()
+    })
   }
 
-  async function deleteBounty(bountyId: string, title: string) {
+  function handleDelete(bountyId: string, title: string) {
     if (!confirm(`Delete "${title}"? This action cannot be undone.`)) return
-    try {
-      await apiRequest(`/orgs/${orgId}/bounties/${bountyId}`, { method: "DELETE" })
-      router.refresh()
-    } catch {
-      alert("Failed to delete bounty. Only draft bounties can be deleted.")
-    }
+    startTransition(async () => {
+      const result = await deleteBounty(bountyId, orgId)
+      if (result?.error) alert(result.error)
+      else router.refresh()
+    })
   }
 
   return (
     <>
-      {/* Status filter tabs */}
       <div className="flex gap-1 border-b">
         {STATUS_TABS.map((tab) => (
           <Link
@@ -101,9 +97,7 @@ export function OrgDashboardClient({ bounties, orgId, activeTab }: Props) {
                 <tr key={b.id} className="hover:bg-muted/30">
                   <td className="px-4 py-3 font-medium max-w-xs truncate">{b.title}</td>
                   <td className="px-4 py-3">
-                    <span
-                      className={`rounded-full px-2 py-0.5 text-xs capitalize ${statusColors[b.status]}`}
-                    >
+                    <span className={`rounded-full px-2 py-0.5 text-xs capitalize ${statusColors[b.status]}`}>
                       {b.status}
                     </span>
                   </td>
@@ -123,7 +117,8 @@ export function OrgDashboardClient({ bounties, orgId, activeTab }: Props) {
                       {b.status === "draft" && (
                         <button
                           onClick={() => changeStatus(b.id, "open")}
-                          className="text-xs text-green-700 hover:underline"
+                          disabled={isPending}
+                          className="text-xs text-green-700 hover:underline disabled:opacity-50"
                         >
                           Open
                         </button>
@@ -131,7 +126,8 @@ export function OrgDashboardClient({ bounties, orgId, activeTab }: Props) {
                       {b.status === "open" && (
                         <button
                           onClick={() => changeStatus(b.id, "closed")}
-                          className="text-xs text-destructive hover:underline"
+                          disabled={isPending}
+                          className="text-xs text-destructive hover:underline disabled:opacity-50"
                         >
                           Close
                         </button>
@@ -141,8 +137,9 @@ export function OrgDashboardClient({ bounties, orgId, activeTab }: Props) {
                       )}
                       {b.status === "draft" && (
                         <button
-                          onClick={() => deleteBounty(b.id, b.title)}
-                          className="text-xs text-destructive hover:underline"
+                          onClick={() => handleDelete(b.id, b.title)}
+                          disabled={isPending}
+                          className="text-xs text-destructive hover:underline disabled:opacity-50"
                         >
                           Delete
                         </button>

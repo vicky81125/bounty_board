@@ -1,12 +1,5 @@
-import { redirect } from "next/navigation"
+import { getOrgBounties } from "@/app/actions/queries/bounties"
 import Link from "next/link"
-import { serverFetch } from "@/lib/server-api"
-
-interface Bounty {
-  id: string
-  title: string
-  status: string
-}
 
 interface Props {
   params: Promise<{ orgId: string }>
@@ -14,9 +7,10 @@ interface Props {
 
 export default async function OrgSubmissionsPage({ params }: Props) {
   const { orgId } = await params
-  const bounties = await serverFetch<Bounty[]>(`/orgs/${orgId}/bounties`)
+  const result = await getOrgBounties(orgId)
+  const bounties = result.data ?? []
 
-  if (!bounties || bounties.length === 0) {
+  if (bounties.length === 0) {
     return (
       <div className="space-y-4">
         <h1 className="text-2xl font-bold">Submissions</h1>
@@ -36,7 +30,7 @@ export default async function OrgSubmissionsPage({ params }: Props) {
       <h1 className="text-2xl font-bold">Submissions</h1>
       <p className="text-sm text-muted-foreground">Select a bounty to view its submissions.</p>
       <ul className="space-y-2">
-        {bounties.map((b) => (
+        {bounties.map((b: any) => (
           <li key={b.id}>
             <Link
               href={`/org/${orgId}/submissions/${b.id}`}

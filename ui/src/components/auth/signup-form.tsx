@@ -1,13 +1,10 @@
 "use client"
 
-import { useCallback, useState } from "react"
-import { useRouter } from "next/navigation"
+import { useCallback, useState, useTransition } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
-import { ApiError, authApi } from "@/lib/api"
-import type { SessionResponse } from "@/lib/auth"
-import { useAuth } from "@/providers/auth-provider"
+import { signUp, checkUsername } from "@/app/actions/mutations/auth"
 
 // ── Schemas ────────────────────────────────────────────────────────────────
 
@@ -47,10 +44,10 @@ type Step = 1 | 2 | 3
 const STEP_LABELS = ["Account details", "Profile info", "Account type"]
 
 export function SignupForm() {
-  const { refreshSession } = useAuth()
-  const router = useRouter()
+  const [isPending, startTransition] = useTransition()
   const [step, setStep] = useState<Step>(1)
   const [serverError, setServerError] = useState<string | null>(null)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [focusField, setFocusField] = useState<string | null>(null)
 
   // Skill tag state
@@ -85,7 +82,7 @@ export function SignupForm() {
       setUsernameChecking(true)
       usernameTimeout(async () => {
         try {
-          const res = await authApi.checkUsername(val)
+          const res = await checkUsername(val)
           setUsernameAvailable(res.available)
         } catch {
           setUsernameAvailable(null)
@@ -110,7 +107,7 @@ export function SignupForm() {
 
   // ── Final submit ─────────────────────────────────────────────────────────
 
-  async function onSubmit(step3: Step3Values) {
+  function onSubmit(step3: Step3Values) {
     setServerError(null)
     const s1 = form1.getValues()
     const s2 = form2.getValues()
@@ -130,30 +127,22 @@ export function SignupForm() {
       twitter_url: s2.twitter_url || undefined,
     }
 
-    try {
-      await authApi.register(payload)
-      await refreshSession()
-      router.push(step3.account_type === "organizer" ? "/org/dashboard" : "/dashboard")
-    } catch (err) {
-      if (err instanceof ApiError) {
-        if (err.status === 409) {
-          const code = (err.body as { code?: string }).code
-          if (code === "email_taken") {
-            setServerError("Email already registered.")
-            setFocusField("email")
-            setStep(1)
-            return
-          }
-          if (code === "username_taken") {
-            setServerError("Username already taken.")
-            setFocusField("username")
-            setStep(1)
-            return
-          }
+    startTransition(async () => {
+      const result = await signUp(payload)
+      if (result?.error) {
+        // Map server-side errors to field focus where possible
+        if (result.error.toLowerCase().includes("email")) {
+          setFocusField("email")
+          setStep(1)
+        } else if (result.error.toLowerCase().includes("username")) {
+          setFocusField("username")
+          setStep(1)
         }
-        setServerError("Something went wrong. Please try again.")
+        setServerError(result.error)
+      } else if (result?.success) {
+        setSuccessMessage(result.success)
       }
-    }
+    })
   }
 
   // ── Skill tag helpers ────────────────────────────────────────────────────
@@ -168,6 +157,17 @@ export function SignupForm() {
 
   function removeSkill(skill: string) {
     setSkills((prev) => prev.filter((s) => s !== skill))
+  }
+
+  // ── Success state ────────────────────────────────────────────────────────
+
+  if (successMessage) {
+    return (
+      <div className="rounded-md bg-green-50 border border-green-200 px-4 py-6 text-center space-y-2">
+        <p className="text-sm font-medium text-green-800">Account created!</p>
+        <p className="text-sm text-green-700">{successMessage}</p>
+      </div>
+    )
   }
 
   // ── Render ───────────────────────────────────────────────────────────────
@@ -450,10 +450,10 @@ export function SignupForm() {
 
           <button
             type="submit"
-            disabled={form3.formState.isSubmitting}
+            disabled={isPending}
             className="w-full inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 disabled:opacity-50 disabled:pointer-events-none transition-colors"
           >
-            {form3.formState.isSubmitting ? "Creating account…" : "Create Account"}
+            {isPending ? "Creating account…" : "Create Account"}
           </button>
         </form>
       )}

@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation"
-import { getServerSession } from "@/lib/server-auth"
-import { serverFetch } from "@/lib/server-api"
+import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 import { OrgShell } from "@/components/layout/org-shell"
+import type { AuthUser } from "@/lib/auth"
 
 interface Props {
   children: React.ReactNode
@@ -10,22 +11,41 @@ interface Props {
 
 export default async function OrgIdLayout({ children, params }: Props) {
   const { orgId } = await params
-  const session = await getServerSession()
-  if (!session) redirect("/login")
-  if (session.user.account_type === "participant") redirect("/dashboard")
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect("/login")
 
-  // Verify user is a member of this org and get their role.
-  // Uses /members/me to fetch only the current user's membership (not all members).
-  const membership = await serverFetch<{ user_id: string; role: string }>(
-    `/orgs/${orgId}/members/me`,
-    { noCache: true }
-  )
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("username, display_name, account_type, avatar_url")
+    .eq("id", user.id)
+    .single()
+
+  if (!profile || profile.account_type === "participant") redirect("/dashboard")
+
+  const admin = createAdminClient()
+  const { data: membership } = await admin
+    .from("org_members")
+    .select("role")
+    .eq("org_id", orgId)
+    .eq("user_id", user.id)
+    .single()
+
   if (!membership) redirect("/org/dashboard")
+
+  const authUser: AuthUser = {
+    id: user.id,
+    email: user.email ?? "",
+    username: profile.username,
+    display_name: profile.display_name,
+    account_type: profile.account_type,
+    avatar_url: profile.avatar_url ?? null,
+  }
 
   const orgRole = membership.role as "admin" | "moderator"
 
   return (
-    <OrgShell user={session.user} orgId={orgId} orgRole={orgRole}>
+    <OrgShell user={authUser} orgId={orgId} orgRole={orgRole}>
       {children}
     </OrgShell>
   )

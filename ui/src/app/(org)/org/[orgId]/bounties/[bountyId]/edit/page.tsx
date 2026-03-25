@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation"
-import { serverFetch } from "@/lib/server-api"
+import { getBounty } from "@/app/actions/queries/bounties"
 import { EditBountyClient } from "./edit-bounty-client"
 
 interface Props {
@@ -9,10 +9,12 @@ interface Props {
 export default async function EditBountyPage({ params }: Props) {
   const { orgId, bountyId } = await params
 
-  // Fetch the bounty via the org-scoped endpoint (validates membership via layout)
-  const bounties = await serverFetch<any[]>(`/orgs/${orgId}/bounties`)
-  const bounty = bounties?.find((b: any) => b.id === bountyId)
-  if (!bounty) redirect(`/org/${orgId}/bounties`)
+  const result = await getBounty(bountyId)
+  if (result.error || !result.data) redirect(`/org/${orgId}/bounties`)
+
+  const bounty = result.data as any
+  // Ensure bounty belongs to this org
+  if (bounty.org_id !== orgId) redirect(`/org/${orgId}/bounties`)
 
   return (
     <div className="max-w-2xl space-y-6">

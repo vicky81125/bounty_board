@@ -1,11 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { useForm, useFieldArray } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
-import { apiRequest } from "@/lib/api"
+import { updateBounty } from "@/app/actions/mutations/bounties"
 import { BOUNTY_TAGS } from "@/lib/constants"
 
 const rubricItemSchema = z.object({
@@ -41,8 +41,8 @@ interface Props {
 
 export function EditBountyClient({ bounty, orgId }: Props) {
   const router = useRouter()
+  const [isPending, startTransition] = useTransition()
   const [apiError, setApiError] = useState<string | null>(null)
-  const [submitting, setSubmitting] = useState(false)
 
   const prize = bounty.prize
   const defaultValues: FormData = {
@@ -90,16 +90,16 @@ export function EditBountyClient({ bounty, orgId }: Props) {
     setValue("submission_formats", watchedFormats.includes(fmt) ? watchedFormats.filter((f) => f !== fmt) : [...watchedFormats, fmt])
   }
 
-  async function onSubmit(data: FormData) {
+  function onSubmit(data: FormData) {
     setApiError(null)
-    setSubmitting(true)
-    try {
-      const prize =
+
+    startTransition(async () => {
+      const prizeData =
         data.prize_amount !== undefined && data.prize_amount > 0
           ? { type: "single" as const, amount: data.prize_amount, currency: data.prize_currency, label: `${data.prize_amount} ${data.prize_currency}` }
           : null
 
-      const payload = {
+      const result = await updateBounty(bounty.id, orgId, {
         title: data.title,
         description_md: data.description_md,
         ideal_output_md: data.ideal_output_md,
@@ -109,25 +109,20 @@ export function EditBountyClient({ bounty, orgId }: Props) {
         submission_formats: data.submission_formats,
         start_date: data.start_date || null,
         end_date: data.end_date || null,
-        prize,
+        prize: prizeData,
         max_submissions_per_user: data.max_submissions_per_user ?? null,
-        eligibility_notes: data.eligibility_notes || null,
+        eligibility_notes: data.eligibility_notes || undefined,
         resources: data.resources.map((r) => ({ label: r.label, url: r.url })),
         rubric: data.rubric.map((r) => ({ criterion: r.criterion, max_points: Number(r.max_points) })),
         status: data.status,
-      }
-
-      await apiRequest(`/orgs/${orgId}/bounties/${bounty.id}`, {
-        method: "PATCH",
-        body: JSON.stringify(payload),
       })
-      router.push(`/org/${orgId}/bounties`)
-    } catch (err: any) {
-      const detail = err?.body?.detail
-      setApiError(typeof detail === "string" ? detail : "Failed to save — please try again")
-    } finally {
-      setSubmitting(false)
-    }
+
+      if (result?.error) {
+        setApiError(result.error)
+      } else {
+        router.push(`/org/${orgId}/bounties`)
+      }
+    })
   }
 
   return (
@@ -138,7 +133,6 @@ export function EditBountyClient({ bounty, orgId }: Props) {
         </div>
       )}
 
-      {/* Basics */}
       <section className="space-y-4">
         <h2 className="text-lg font-semibold border-b pb-2">Basics</h2>
         <div className="space-y-1">
@@ -170,7 +164,6 @@ export function EditBountyClient({ bounty, orgId }: Props) {
         </div>
       </section>
 
-      {/* Description */}
       <section className="space-y-4">
         <h2 className="text-lg font-semibold border-b pb-2">Description</h2>
         <div className="space-y-1">
@@ -193,7 +186,6 @@ export function EditBountyClient({ bounty, orgId }: Props) {
         </div>
       </section>
 
-      {/* Submission & Prize */}
       <section className="space-y-4">
         <h2 className="text-lg font-semibold border-b pb-2">Submission &amp; Prize</h2>
         <div className="space-y-1">
@@ -233,14 +225,8 @@ export function EditBountyClient({ bounty, orgId }: Props) {
         <div className="space-y-1">
           <label className="text-sm font-medium">Max submissions per user</label>
           <div className="flex items-center gap-3">
-            <input
-              type="number"
-              min={1}
-              step={1}
-              {...register("max_submissions_per_user")}
-              className="w-32 rounded-md border px-3 py-2 text-sm"
-              placeholder="Unlimited"
-            />
+            <input type="number" min={1} step={1} {...register("max_submissions_per_user")}
+              className="w-32 rounded-md border px-3 py-2 text-sm" placeholder="Unlimited" />
             <span className="text-xs text-muted-foreground">Leave blank for unlimited</span>
           </div>
         </div>
@@ -261,9 +247,10 @@ export function EditBountyClient({ bounty, orgId }: Props) {
         </div>
       </section>
 
-      {/* Rubric */}
       <section className="space-y-4">
-        <h2 className="text-lg font-semibold border-b pb-2">Rubric <span className="text-sm font-normal text-muted-foreground">(total: {totalPoints} pts)</span></h2>
+        <h2 className="text-lg font-semibold border-b pb-2">
+          Rubric <span className="text-sm font-normal text-muted-foreground">(total: {totalPoints} pts)</span>
+        </h2>
         {rubricFields.map((field, i) => (
           <div key={field.id} className="flex gap-2">
             <input {...register(`rubric.${i}.criterion`)} className="flex-1 rounded-md border px-3 py-2 text-sm" placeholder="Criterion" />
@@ -277,9 +264,9 @@ export function EditBountyClient({ bounty, orgId }: Props) {
       </section>
 
       <div className="flex gap-3 pt-4">
-        <button type="submit" disabled={submitting}
+        <button type="submit" disabled={isPending}
           className="rounded-md bg-primary px-6 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50">
-          {submitting ? "Saving…" : "Save Changes"}
+          {isPending ? "Saving…" : "Save Changes"}
         </button>
         <button type="button" onClick={() => router.back()} className="rounded-md border px-6 py-2 text-sm hover:bg-muted">Cancel</button>
       </div>

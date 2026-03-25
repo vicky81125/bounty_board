@@ -1,28 +1,8 @@
 import { Suspense } from "react"
-import { serverFetch } from "@/lib/server-api"
+import { getBounties } from "@/app/actions/queries/bounties"
 import { BountyCard } from "@/components/bounty-card"
 import { BountyFilters } from "./bounty-filters"
 import Link from "next/link"
-
-interface BountyCardData {
-  id: string
-  title: string
-  org_name: string
-  prize_summary: string | null
-  difficulty: "easy" | "medium" | "hard"
-  tags: string[]
-  status: "open" | "closed"
-  end_date: string | null
-  submission_count: number | null
-  created_at: string
-}
-
-interface ListResponse {
-  items: BountyCardData[]
-  total: number
-  page: number
-  page_size: number
-}
 
 interface Props {
   searchParams: Promise<{
@@ -37,20 +17,21 @@ interface Props {
 
 export default async function BountiesPage({ searchParams }: Props) {
   const sp = await searchParams
-  const params = new URLSearchParams()
-  if (sp.search) params.set("search", sp.search)
-  if (sp.status) params.set("status", sp.status)
-  if (sp.difficulty) params.set("difficulty", sp.difficulty)
-  if (sp.tags) params.set("tags", sp.tags)
-  if (sp.sort) params.set("sort", sp.sort)
-  if (sp.page) params.set("page", sp.page)
-
-  const qs = params.toString()
-  const data = await serverFetch<ListResponse>(`/bounties${qs ? `?${qs}` : ""}`)
-  const items = data?.items ?? []
-  const total = data?.total ?? 0
   const page = Number(sp.page ?? 1)
   const pageSize = 20
+
+  const result = await getBounties({
+    search: sp.search,
+    status: sp.status,
+    difficulty: sp.difficulty,
+    tags: sp.tags,
+    sort: sp.sort,
+    page,
+    pageSize,
+  })
+
+  const items = result.data?.items ?? []
+  const total = result.data?.total ?? 0
 
   return (
     <div className="space-y-6">
@@ -89,7 +70,6 @@ export default async function BountiesPage({ searchParams }: Props) {
             ))}
           </div>
 
-          {/* Pagination */}
           {total > pageSize && (
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">
@@ -97,18 +77,10 @@ export default async function BountiesPage({ searchParams }: Props) {
               </span>
               <div className="flex gap-2">
                 {page > 1 && (
-                  <PaginationLink
-                    sp={sp}
-                    page={page - 1}
-                    label="← Previous"
-                  />
+                  <PaginationLink sp={sp} page={page - 1} label="← Previous" />
                 )}
                 {page * pageSize < total && (
-                  <PaginationLink
-                    sp={sp}
-                    page={page + 1}
-                    label="Next →"
-                  />
+                  <PaginationLink sp={sp} page={page + 1} label="Next →" />
                 )}
               </div>
             </div>

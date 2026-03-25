@@ -1,54 +1,57 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState, useTransition } from "react"
 import { useParams, useRouter } from "next/navigation"
-import { apiRequest } from "@/lib/api"
+import { createClient } from "@/lib/supabase/browser"
+import { createSubmission } from "@/app/actions/mutations/submissions"
 
 const MAX_FILE_BYTES = 52_428_800 // 50 MB
 
 type SubmissionType = "zip" | "github_url" | "drive_url"
 
-type Bounty = {
+type BountyInfo = {
   id: string
   title: string
   status: string
   submission_formats: SubmissionType[]
-  max_submissions_per_user: number | null
 }
 
 export default function SubmitPage() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
 
-  const [bounty, setBounty] = useState<Bounty | null>(null)
+  const [bounty, setBounty] = useState<BountyInfo | null>(null)
   const [loading, setLoading] = useState(true)
 
   const [activeType, setActiveType] = useState<SubmissionType>("zip")
   const [description, setDescription] = useState("")
   const [externalUrl, setExternalUrl] = useState("")
 
-  // Zip file selection (no upload yet — upload happens on submit)
   const [file, setFile] = useState<File | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
-
   const [uploadProgress, setUploadProgress] = useState<number | null>(null)
-  const [submitting, setSubmitting] = useState(false)
+
+  const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/bounties/${id}`, { credentials: "include" })
-      .then((r) => r.json())
-      .then((data: Bounty) => {
-        setBounty(data)
-        if (data.submission_formats?.length > 0) {
-          setActiveType(data.submission_formats[0])
+    const supabase = createClient()
+    supabase
+      .from("bounties")
+      .select("id, title, status, submission_formats")
+      .eq("id", id)
+      .single()
+      .then(({ data }) => {
+        if (data) {
+          setBounty(data as BountyInfo)
+          if (data.submission_formats?.length > 0) {
+            setActiveType(data.submission_formats[0] as SubmissionType)
+          }
         }
         setLoading(false)
       })
-      .catch(() => setLoading(false))
   }, [id])
 
-  // Redirect if bounty is not open
   useEffect(() => {
     if (!loading && bounty && bounty.status !== "open") {
       router.replace(`/bounties/${id}`)
@@ -76,60 +79,67 @@ export default function SubmitPage() {
       return
     }
 
-    setSubmitting(true)
-    try {
-      let uploadToken: string | undefined
+    startTransition(async () => {
+      try {
+        let uploadToken: string | undefined
 
-      if (activeType === "zip" && file) {
-        // Step 1: get signed upload URL
-        const urlResp = await apiRequest<{ signed_url: string; upload_token: string }>(
-          `/bounties/${id}/submissions/upload-url`,
-          { method: "POST" }
-        )
+        if (activeType === "zip" && file) {
+          // Step 1: get signed upload URL from our route handler
+          const urlResp = await fetch(`/api/upload?bountyId=${id}`, { method: "POST" })
+          if (!urlResp.ok) {
+            const err = await urlResp.json().catch(() => ({}))
+            setError(err.error ?? "Failed to start upload — please try again")
+            return
+          }
+          const { signedUrl, uploadToken: token } = await urlResp.json()
 
-        // Step 2: PUT file directly to Supabase Storage (XHR for progress)
-        setUploadProgress(0)
-        await new Promise<void>((resolve, reject) => {
-          const xhr = new XMLHttpRequest()
-          xhr.open("PUT", urlResp.signed_url)
-          xhr.setRequestHeader("Content-Type", "application/zip")
-          xhr.upload.onprogress = (ev) => {
-            if (ev.lengthComputable) setUploadProgress(Math.round((ev.loaded / ev.total) * 100))
-          }
-          xhr.onload = () => {
-            if (xhr.status >= 200 && xhr.status < 300) resolve()
-            else reject(new Error(`Upload failed (${xhr.status}) — please try again`))
-          }
-          xhr.onerror = () => reject(new Error("Network error during upload — please try again"))
-          xhr.send(file)
+          // Step 2: PUT file directly to Supabase Storage
+          setUploadProgress(0)
+          await new Promise<void>((resolve, reject) => {
+            const xhr = new XMLHttpRequest()
+            xhr.open("PUT", signedUrl)
+            xhr.setRequestHeader("Content-Type", "application/zip")
+            xhr.upload.onprogress = (ev) => {
+              if (ev.lengthComputable) setUploadProgress(Math.round((ev.loaded / ev.total) * 100))
+            }
+            xhr.onload = () => {
+              if (xhr.status >= 200 && xhr.status < 300) resolve()
+              else reject(new Error(`Upload failed (${xhr.status}) — please try again`))
+            }
+            xhr.onerror = () => reject(new Error("Network error during upload — please try again"))
+            xhr.send(file)
+          })
+
+          uploadToken = token
+        }
+
+        // Step 3: create submission record via Server Action
+        const result = await createSubmission({
+          bountyId: id,
+          submissionType: activeType,
+          uploadToken,
+          externalUrl: activeType !== "zip" ? externalUrl : undefined,
+          description,
         })
 
-        uploadToken = urlResp.upload_token
+        if (result?.error) {
+          setError(result.error)
+          setUploadProgress(null)
+        } else {
+          router.push(`/bounties/${id}/my-submission`)
+        }
+      } catch (err: any) {
+        setError(err?.message ?? "Submission failed — please try again")
+        setUploadProgress(null)
       }
-
-      // Step 3: create submission record
-      await apiRequest(`/bounties/${id}/submissions`, {
-        method: "POST",
-        body: JSON.stringify({
-          submission_type: activeType,
-          upload_token: uploadToken,
-          external_url: activeType !== "zip" ? externalUrl : undefined,
-          description,
-        }),
-      })
-      router.push(`/bounties/${id}/my-submission`)
-    } catch (err: any) {
-      setError(err?.body?.detail ?? err?.message ?? "Submission failed — please try again")
-      setUploadProgress(null)
-    } finally {
-      setSubmitting(false)
-    }
+    })
   }
 
   if (loading) return <div className="p-6 text-sm text-muted-foreground">Loading…</div>
   if (!bounty) return null
 
   const formats = bounty.submission_formats ?? []
+  const submitting = isPending
 
   return (
     <div className="max-w-xl mx-auto space-y-6">
@@ -145,7 +155,6 @@ export default function SubmitPage() {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Submission Type Tabs */}
         {formats.length > 1 && (
           <div className="flex gap-1 rounded-lg border p-1 bg-muted/40 w-fit">
             {formats.map((fmt) => (
@@ -165,14 +174,11 @@ export default function SubmitPage() {
           </div>
         )}
 
-        {/* Zip Upload */}
         {activeType === "zip" && (
           <div className="space-y-2">
             <label className="text-sm font-medium">
               Upload Zip File
-              <span className="ml-2 text-xs text-muted-foreground font-normal">
-                Max 50 MB · ZIP only
-              </span>
+              <span className="ml-2 text-xs text-muted-foreground font-normal">Max 50 MB · ZIP only</span>
             </label>
             <div
               onClick={() => fileInputRef.current?.click()}
@@ -202,14 +208,10 @@ export default function SubmitPage() {
                 onChange={handleFileChange}
               />
             </div>
-
             {uploadProgress !== null && (
               <div className="space-y-1">
                 <div className="h-2 rounded-full bg-muted overflow-hidden">
-                  <div
-                    className="h-full bg-primary transition-all"
-                    style={{ width: `${uploadProgress}%` }}
-                  />
+                  <div className="h-full bg-primary transition-all" style={{ width: `${uploadProgress}%` }} />
                 </div>
                 <p className="text-xs text-muted-foreground">Uploading… {uploadProgress}%</p>
               </div>
@@ -217,7 +219,6 @@ export default function SubmitPage() {
           </div>
         )}
 
-        {/* URL Input */}
         {activeType !== "zip" && (
           <div className="space-y-1">
             <label className="text-sm font-medium">
@@ -238,7 +239,6 @@ export default function SubmitPage() {
           </div>
         )}
 
-        {/* Description */}
         <div className="space-y-1">
           <label className="text-sm font-medium">
             Description
@@ -265,10 +265,10 @@ export default function SubmitPage() {
             className="rounded-md bg-primary px-6 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
           >
             {submitting
-            ? uploadProgress !== null && uploadProgress < 100
-              ? `Uploading… ${uploadProgress}%`
-              : "Submitting…"
-            : "Submit Solution"}
+              ? uploadProgress !== null && uploadProgress < 100
+                ? `Uploading… ${uploadProgress}%`
+                : "Submitting…"
+              : "Submit Solution"}
           </button>
           <button
             type="button"

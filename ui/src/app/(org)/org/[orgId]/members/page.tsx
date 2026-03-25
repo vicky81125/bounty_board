@@ -1,6 +1,6 @@
+import { createAdminClient } from "@/lib/supabase/admin"
+import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
-import { getServerSession } from "@/lib/server-auth"
-import { serverFetch } from "@/lib/server-api"
 import { MembersClient } from "./members-client"
 
 interface Member {
@@ -17,16 +17,23 @@ interface Props {
 
 export default async function MembersPage({ params }: Props) {
   const { orgId } = await params
-  const session = await getServerSession()
-  if (!session) redirect("/login")
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect("/login")
 
-  // Server-side role guard: check if current user is admin
-  const members = await serverFetch<Member[]>(`/orgs/${orgId}/members`)
-  if (!members) redirect("/org/dashboard")
+  const admin = createAdminClient()
 
-  const currentMember = members.find((m) => m.user_id === session.user.id)
-  if (!currentMember || currentMember.role !== "admin") {
-    // Moderators get a 403 page — not just a redirect
+  // Get current user's membership
+  const { data: myMembership } = await admin
+    .from("org_members")
+    .select("role")
+    .eq("org_id", orgId)
+    .eq("user_id", user.id)
+    .single()
+
+  if (!myMembership) redirect("/org/dashboard")
+
+  if (myMembership.role !== "admin") {
     return (
       <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-8 text-center">
         <h2 className="text-lg font-semibold text-destructive mb-2">Access Denied</h2>
@@ -37,12 +44,27 @@ export default async function MembersPage({ params }: Props) {
     )
   }
 
+  // Fetch all members with profile info
+  const { data: rows } = await admin
+    .from("org_members")
+    .select("user_id, role, created_at, profiles!inner(display_name, email)")
+    .eq("org_id", orgId)
+    .order("created_at")
+
+  const members: Member[] = (rows ?? []).map((r: any) => ({
+    user_id: r.user_id,
+    display_name: r.profiles?.display_name ?? "",
+    email: r.profiles?.email ?? "",
+    role: r.role,
+    joined_at: r.created_at,
+  }))
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Members</h1>
       </div>
-      <MembersClient members={members} orgId={orgId} currentUserId={session.user.id} />
+      <MembersClient members={members} orgId={orgId} currentUserId={user.id} />
     </div>
   )
 }

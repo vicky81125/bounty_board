@@ -1,21 +1,13 @@
 "use client"
 
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useRef,
-  useState,
-} from "react"
-import type { AuthStatus, AuthUser, SessionResponse } from "@/lib/auth"
-import { authApi } from "@/lib/api"
+import { createContext, useCallback, useContext } from "react"
+import { createClient } from "@/lib/supabase/browser"
+import type { AuthStatus, AuthUser } from "@/lib/auth"
 
 type AuthContextValue = {
   status: AuthStatus
   user: AuthUser | null
   sessionExpiresAt: Date | null
-  signIn: (email: string, password: string) => Promise<SessionResponse>
   signOut: () => Promise<void>
   refreshSession: () => Promise<void>
 }
@@ -28,59 +20,26 @@ export function useAuth(): AuthContextValue {
   return ctx
 }
 
-function applySessionData(
-  data: SessionResponse,
-  setUser: (u: AuthUser) => void,
-  setSessionExpiresAt: (d: Date) => void,
-  setStatus: (s: AuthStatus) => void,
-) {
-  setUser(data.user)
-  setSessionExpiresAt(new Date(data.session_expires_at))
-  setStatus("authenticated")
-}
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [status, setStatus] = useState<AuthStatus>("loading")
-  const [user, setUser] = useState<AuthUser | null>(null)
-  const [sessionExpiresAt, setSessionExpiresAt] = useState<Date | null>(null)
-  const hasHydrated = useRef(false)
-
-  const refreshSession = useCallback(async () => {
-    try {
-      const data = await authApi.session() as SessionResponse
-      applySessionData(data, setUser, setSessionExpiresAt, setStatus)
-    } catch {
-      setUser(null)
-      setSessionExpiresAt(null)
-      setStatus("unauthenticated")
-    }
-  }, [])
-
-  // Hydrate session on mount
-  useEffect(() => {
-    if (hasHydrated.current) return
-    hasHydrated.current = true
-    refreshSession()
-  }, [refreshSession])
-
-  const signIn = useCallback(async (email: string, password: string) => {
-    const data = await authApi.login(email, password) as SessionResponse
-    applySessionData(data, setUser, setSessionExpiresAt, setStatus)
-    return data
-  }, [])
-
   const signOut = useCallback(async () => {
-    try {
-      await authApi.logout()
-    } finally {
-      setUser(null)
-      setSessionExpiresAt(null)
-      setStatus("unauthenticated")
-    }
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    // Caller handles navigation (e.g. router.push('/login'))
   }, [])
+
+  // Session refresh is handled automatically by @supabase/ssr middleware
+  const refreshSession = useCallback(async () => {}, [])
 
   return (
-    <AuthContext.Provider value={{ status, user, sessionExpiresAt, signIn, signOut, refreshSession }}>
+    <AuthContext.Provider
+      value={{
+        status: "authenticated",
+        user: null,
+        sessionExpiresAt: null,
+        signOut,
+        refreshSession,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   )

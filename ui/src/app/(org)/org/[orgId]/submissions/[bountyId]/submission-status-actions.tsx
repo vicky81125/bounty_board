@@ -1,8 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
-import { apiRequest } from "@/lib/api"
+import { updateSubmissionStatus } from "@/app/actions/mutations/submissions"
 
 interface Props {
   orgId: string
@@ -12,32 +12,32 @@ interface Props {
 
 export function SubmissionStatusActions({ orgId, submissionId, currentStatus }: Props) {
   const router = useRouter()
-  const [busy, setBusy] = useState(false)
+  const [isPending, startTransition] = useTransition()
   const [showRejectDialog, setShowRejectDialog] = useState(false)
   const [rejectNotes, setRejectNotes] = useState("")
+  const [error, setError] = useState<string | null>(null)
 
-  async function updateStatus(newStatus: string, notes?: string) {
-    setBusy(true)
-    try {
-      await apiRequest(`/orgs/${orgId}/submissions/${submissionId}/status`, {
-        method: "PATCH",
-        body: JSON.stringify({ status: newStatus, review_notes: notes || null }),
-      })
-      router.refresh()
-    } catch {
-      // silently fail — page will show stale data
-    } finally {
-      setBusy(false)
-    }
+  function handleStatusChange(newStatus: "under_review" | "rejected", notes?: string) {
+    startTransition(async () => {
+      const result = await updateSubmissionStatus(submissionId, orgId, newStatus, notes)
+      if (result?.error) {
+        setError(result.error)
+      } else {
+        router.refresh()
+      }
+    })
   }
 
   return (
     <>
+      {error && (
+        <p className="text-xs text-destructive">{error}</p>
+      )}
       <div className="flex gap-1.5">
         {currentStatus === "pending" && (
           <button
-            onClick={() => updateStatus("under_review")}
-            disabled={busy}
+            onClick={() => handleStatusChange("under_review")}
+            disabled={isPending}
             className="text-xs rounded-md border px-2 py-1 hover:bg-muted disabled:opacity-50"
           >
             Mark Under Review
@@ -46,7 +46,7 @@ export function SubmissionStatusActions({ orgId, submissionId, currentStatus }: 
         {(currentStatus === "pending" || currentStatus === "under_review") && (
           <button
             onClick={() => setShowRejectDialog(true)}
-            disabled={busy}
+            disabled={isPending}
             className="text-xs rounded-md border border-destructive/50 px-2 py-1 text-destructive hover:bg-destructive/10 disabled:opacity-50"
           >
             Reject
@@ -78,9 +78,9 @@ export function SubmissionStatusActions({ orgId, submissionId, currentStatus }: 
                 Cancel
               </button>
               <button
-                onClick={async () => {
+                onClick={() => {
                   setShowRejectDialog(false)
-                  await updateStatus("rejected", rejectNotes)
+                  handleStatusChange("rejected", rejectNotes)
                 }}
                 className="rounded-md bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground hover:bg-destructive/90"
               >
