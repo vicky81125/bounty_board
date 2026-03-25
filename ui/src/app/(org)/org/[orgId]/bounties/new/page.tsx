@@ -203,8 +203,8 @@ export default function NewBountyPage() {
                   onClick={() => toggleTag(tag)}
                   className={`rounded-full px-3 py-1 text-xs border transition-colors ${
                     watchedTags.includes(tag)
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "hover:bg-muted"
+                      ? "bg-black text-white border-black"
+                      : "border-border bg-card hover:bg-muted"
                   }`}
                 >
                   {tag}
@@ -259,7 +259,7 @@ export default function NewBountyPage() {
             <button
               type="button"
               onClick={() => appendSkill({ value: "" })}
-              className="text-sm text-primary hover:underline"
+              className="text-sm text-foreground underline hover:opacity-70"
             >
               + Add skill
             </button>
@@ -382,7 +382,7 @@ export default function NewBountyPage() {
             <button
               type="button"
               onClick={() => appendResource({ label: "", url: "" })}
-              className="text-sm text-primary hover:underline"
+              className="text-sm text-foreground underline hover:opacity-70"
             >
               + Add resource
             </button>
@@ -432,7 +432,7 @@ export default function NewBountyPage() {
           <button
             type="button"
             onClick={() => appendRubric({ criterion: "", max_points: 10 })}
-            className="text-sm text-primary hover:underline"
+            className="text-sm text-foreground underline hover:opacity-70"
           >
             + Add criterion
           </button>
@@ -442,7 +442,7 @@ export default function NewBountyPage() {
           <button
             type="submit"
             disabled={isPending}
-            className="rounded-md bg-primary px-6 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+            className="rounded-lg btn-pink px-6 py-2 text-sm disabled:opacity-50"
           >
             {isPending ? "Saving…" : "Create Bounty"}
           </button>

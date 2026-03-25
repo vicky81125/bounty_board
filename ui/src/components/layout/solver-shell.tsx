@@ -38,16 +38,16 @@ function UserMenu({ user, onSignOut }: { user: AuthUser; onSignOut: () => void }
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-2 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        className="flex items-center gap-2 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
         aria-label="User menu"
       >
-        <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-semibold select-none">
+        <div className="h-8 w-8 rounded-full bg-white text-black border-2 border-white/20 flex items-center justify-center text-xs font-semibold select-none">
           {getInitials(user.display_name)}
         </div>
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-2 w-52 rounded-lg border bg-background shadow-lg z-50 overflow-hidden">
+        <div className="absolute right-0 mt-2 w-52 rounded-lg border bg-white shadow-lg z-50 overflow-hidden">
           <div className="px-4 py-3 border-b bg-muted/30">
             <p className="text-sm font-medium truncate">{user.display_name}</p>
             <p className="text-xs text-muted-foreground truncate">{user.email}</p>
@@ -80,23 +80,23 @@ export function SolverShell({ user, children }: SolverShellProps) {
   return (
     <div className="min-h-screen flex flex-col">
       {/* Top navigation bar */}
-      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <header className="sticky top-0 z-50 w-full bg-black">
         <div className="mx-auto w-full max-w-5xl px-6 flex h-14 items-center">
-          <Link href="/bounties" className="flex items-center gap-2 font-semibold mr-8">
-            <Target className="h-5 w-5" />
+          <Link href="/bounties" className="flex items-center gap-2 font-bold mr-8 text-white">
+            <Target className="h-5 w-5 text-white" />
             <span>Bounty Board</span>
           </Link>
 
           <nav className="hidden md:flex items-center gap-6 text-sm flex-1">
             <Link
               href="/bounties"
-              className="text-muted-foreground hover:text-foreground transition-colors"
+              className="text-white/70 hover:text-white transition-colors"
             >
               Bounties
             </Link>
             <Link
               href="/leaderboard"
-              className="text-muted-foreground hover:text-foreground transition-colors"
+              className="text-white/70 hover:text-white transition-colors"
             >
               Leaderboard
             </Link>

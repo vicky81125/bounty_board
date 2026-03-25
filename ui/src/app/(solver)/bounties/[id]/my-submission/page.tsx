@@ -10,10 +10,10 @@ interface Props {
 }
 
 const statusConfig = {
-  pending: { label: "Awaiting Review", color: "bg-amber-100 text-amber-800" },
-  under_review: { label: "Under Review", color: "bg-blue-100 text-blue-800" },
-  scored: { label: "Scored", color: "bg-green-100 text-green-800" },
-  rejected: { label: "Rejected", color: "bg-red-100 text-red-800" },
+  pending: { label: "Awaiting Review", color: "bg-muted text-muted-foreground" },
+  under_review: { label: "Under Review", color: "bg-black/5 text-foreground" },
+  scored: { label: "Scored", color: "bg-black/10 text-foreground" },
+  rejected: { label: "Rejected", color: "bg-destructive/10 text-destructive" },
 } as const
 
 export default async function MySubmissionPage({ params }: Props) {
@@ -47,7 +47,7 @@ export default async function MySubmissionPage({ params }: Props) {
       <div className="max-w-xl space-y-4">
         <h1 className="text-2xl font-bold">{bounty.title}</h1>
         <p className="text-muted-foreground text-sm">You have not submitted a solution yet.</p>
-        <Link href={`/bounties/${id}`} className="text-sm text-primary hover:underline">
+        <Link href={`/bounties/${id}`} className="text-sm text-foreground underline hover:opacity-70">
           ← Back to bounty
         </Link>
       </div>
@@ -78,27 +78,27 @@ export default async function MySubmissionPage({ params }: Props) {
       </div>
 
       {submission.status === "scored" && submission.total_score != null && (
-        <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-4 space-y-2">
-          <p className="text-sm font-semibold text-green-900">Your Score</p>
+        <div className="rounded-xl border border-border bg-card px-4 py-4 space-y-2">
+          <p className="text-sm font-semibold text-foreground">Your Score</p>
           <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-bold tabular-nums text-green-800">
+            <span className="text-3xl font-bold tabular-nums text-foreground">
               {submission.total_score}
             </span>
-            <span className="text-lg text-green-700 font-medium">
+            <span className="text-lg text-muted-foreground font-medium">
               / {submission.max_possible_score} pts
             </span>
           </div>
           {submission.max_possible_score != null && submission.max_possible_score > 0 && (
             <div className="space-y-1">
-              <div className="w-full bg-green-200 rounded-full h-2 overflow-hidden">
+              <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
                 <div
-                  className="h-2 rounded-full bg-green-600 transition-all"
+                  className="h-2 rounded-full bg-foreground/40 transition-all"
                   style={{
                     width: `${Math.min(100, (submission.total_score / submission.max_possible_score) * 100).toFixed(1)}%`,
                   }}
                 />
               </div>
-              <p className="text-xs text-green-700 text-right">
+              <p className="text-xs text-muted-foreground text-right">
                 {((submission.total_score / submission.max_possible_score) * 100).toFixed(1)}%
               </p>
             </div>
@@ -107,7 +107,7 @@ export default async function MySubmissionPage({ params }: Props) {
       )}
 
       {submission.status === "under_review" && (
-        <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+        <div className="rounded-xl border border-border bg-muted px-4 py-3 text-sm text-muted-foreground">
           Your submission is being reviewed. You will see your score here once grading is complete.
         </div>
       )}
@@ -129,7 +129,7 @@ export default async function MySubmissionPage({ params }: Props) {
               href={submission.external_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-sm text-primary hover:underline break-all"
+              className="text-sm text-foreground underline hover:opacity-70 break-all"
             >
               {submission.external_url}
             </a>
@@ -157,7 +157,7 @@ export default async function MySubmissionPage({ params }: Props) {
       {submission.status === "rejected" && bounty.status === "open" && (
         <Link
           href={`/bounties/${id}/submit`}
-          className="inline-block rounded-md bg-primary px-6 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+          className="inline-block rounded-lg btn-pink px-6 py-2 text-sm"
         >
           Submit Again
         </Link>

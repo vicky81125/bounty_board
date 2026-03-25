@@ -26,8 +26,8 @@ export async function BountyLeaderboard({ bountyId, page = 1 }: BountyLeaderboar
   if (result.error) {
     return (
       <section className="space-y-4">
-        <h2 className="text-lg font-semibold">Leaderboard</h2>
-        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+        <h2 className="text-xl font-bold">Leaderboard</h2>
+        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
           Failed to load leaderboard.
         </div>
       </section>
@@ -40,7 +40,7 @@ export async function BountyLeaderboard({ bountyId, page = 1 }: BountyLeaderboar
 
   return (
     <section className="space-y-4">
-      <h2 className="text-lg font-semibold">Leaderboard</h2>
+      <h2 className="text-xl font-bold">Leaderboard</h2>
 
       {entries.length === 0 ? (
         <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
@@ -48,7 +48,7 @@ export async function BountyLeaderboard({ bountyId, page = 1 }: BountyLeaderboar
         </div>
       ) : (
         <>
-          <div className="rounded-lg border overflow-hidden">
+          <div className="rounded-xl border overflow-hidden">
             <table className="w-full text-sm">
               <thead className="bg-muted/50">
                 <tr>
@@ -64,7 +64,7 @@ export async function BountyLeaderboard({ bountyId, page = 1 }: BountyLeaderboar
                   <tr
                     key={entry.user_id}
                     className={
-                      entry.is_caller ? "bg-primary/10 font-medium" : "hover:bg-muted/20"
+                      entry.is_caller ? "bg-primary/5 font-medium" : "hover:bg-muted/20"
                     }
                   >
                     <td className="px-4 py-3 tabular-nums text-muted-foreground">
@@ -74,7 +74,7 @@ export async function BountyLeaderboard({ bountyId, page = 1 }: BountyLeaderboar
                       <div className="flex items-center gap-2">
                         <span>{entry.display_name}</span>
                         {entry.is_caller && (
-                          <span className="text-xs rounded-full bg-primary/20 text-primary px-2 py-0.5 font-medium">
+                          <span className="text-xs rounded-full bg-black text-white px-2 py-0.5 font-medium">
                             You
                           </span>
                         )}
@@ -99,7 +99,7 @@ export async function BountyLeaderboard({ bountyId, page = 1 }: BountyLeaderboar
             <div className="flex items-center justify-center gap-3">
               <Link
                 href={`?leaderboard_page=${Math.max(1, page - 1)}`}
-                className={`rounded-md border px-3 py-1.5 text-sm transition-colors ${
+                className={`rounded-lg border border-border px-3 py-1.5 text-sm font-medium transition-colors ${
                   page === 1 ? "pointer-events-none opacity-40" : "hover:bg-muted"
                 }`}
               >
@@ -110,7 +110,7 @@ export async function BountyLeaderboard({ bountyId, page = 1 }: BountyLeaderboar
               </span>
               <Link
                 href={`?leaderboard_page=${Math.min(totalPages, page + 1)}`}
-                className={`rounded-md border px-3 py-1.5 text-sm transition-colors ${
+                className={`rounded-lg border border-border px-3 py-1.5 text-sm font-medium transition-colors ${
                   page === totalPages ? "pointer-events-none opacity-40" : "hover:bg-muted"
                 }`}
               >

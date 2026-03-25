@@ -163,9 +163,9 @@ export function SignupForm() {
 
   if (successMessage) {
     return (
-      <div className="rounded-md bg-green-50 border border-green-200 px-4 py-6 text-center space-y-2">
-        <p className="text-sm font-medium text-green-800">Account created!</p>
-        <p className="text-sm text-green-700">{successMessage}</p>
+      <div className="rounded-xl border border-border bg-muted px-4 py-6 text-center space-y-2">
+        <p className="text-sm font-semibold text-foreground">Account created!</p>
+        <p className="text-sm text-muted-foreground">{successMessage}</p>
       </div>
     )
   }
@@ -276,7 +276,7 @@ export function SignupForm() {
                 <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">…</span>
               )}
               {!usernameChecking && usernameAvailable === true && (
-                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-green-600">✓ available</span>
+                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-foreground/60">✓ available</span>
               )}
               {!usernameChecking && usernameAvailable === false && (
                 <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-destructive">✗ taken</span>
@@ -291,7 +291,7 @@ export function SignupForm() {
           <button
             type="button"
             onClick={nextStep}
-            className="w-full inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 transition-colors"
+            className="w-full inline-flex items-center justify-center rounded-lg btn-pink px-4 py-2.5 text-sm"
           >
             Continue →
           </button>
@@ -402,7 +402,7 @@ export function SignupForm() {
             <button
               type="button"
               onClick={nextStep}
-              className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 transition-colors"
+              className="inline-flex items-center justify-center rounded-lg btn-pink px-4 py-2.5 text-sm"
             >
               Continue →
             </button>
@@ -451,7 +451,7 @@ export function SignupForm() {
           <button
             type="submit"
             disabled={isPending}
-            className="w-full inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 disabled:opacity-50 disabled:pointer-events-none transition-colors"
+            className="w-full inline-flex items-center justify-center rounded-lg btn-pink px-4 py-2.5 text-sm disabled:opacity-50 disabled:pointer-events-none"
           >
             {isPending ? "Creating account…" : "Create Account"}
           </button>

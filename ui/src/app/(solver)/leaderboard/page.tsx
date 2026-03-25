@@ -2,15 +2,15 @@ import { getGlobalLeaderboard } from "@/app/actions/queries/leaderboard"
 import Link from "next/link"
 
 const MEDAL_COLORS = [
-  { bg: "bg-yellow-100", border: "border-yellow-300", text: "text-yellow-700" },
-  { bg: "bg-slate-100", border: "border-slate-300", text: "text-slate-600" },
-  { bg: "bg-orange-100", border: "border-orange-300", text: "text-orange-700" },
+  { bg: "bg-black/10", border: "border-black/20", text: "text-foreground" },
+  { bg: "bg-black/5", border: "border-black/10", text: "text-foreground/80" },
+  { bg: "bg-black/5", border: "border-black/10", text: "text-foreground/70" },
 ]
 
 const DIFFICULTY_BADGE: Record<string, string> = {
-  hard: "bg-red-100 text-red-700",
-  medium: "bg-amber-100 text-amber-700",
-  easy: "bg-green-100 text-green-700",
+  hard: "bg-black/20 text-black/90",
+  medium: "bg-black/10 text-black/80",
+  easy: "bg-black/5 text-black/70",
 }
 
 function getInitials(name: string): string {
@@ -38,7 +38,7 @@ export default async function GlobalLeaderboardPage({
     return (
       <div className="space-y-4">
         <h1 className="text-2xl font-bold">Global Leaderboard</h1>
-        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
           Failed to load leaderboard.
         </div>
       </div>
@@ -91,7 +91,7 @@ export default async function GlobalLeaderboardPage({
                       {Number(entry.global_score).toFixed(1)}
                     </p>
                     {entry.is_caller && (
-                      <span className="text-xs rounded-full bg-primary/20 text-primary px-2 py-0.5 font-medium">
+                      <span className="text-xs rounded-full bg-black text-white px-2 py-0.5 font-medium">
                         You
                       </span>
                     )}
@@ -117,7 +117,7 @@ export default async function GlobalLeaderboardPage({
                 {entries.map((entry: any) => (
                   <tr
                     key={entry.user_id}
-                    className={entry.is_caller ? "bg-primary/10" : "hover:bg-muted/20"}
+                    className={entry.is_caller ? "bg-primary/5 font-medium" : "hover:bg-muted/20"}
                   >
                     <td className="px-4 py-3 font-medium tabular-nums text-muted-foreground">
                       #{entry.rank}
@@ -129,7 +129,7 @@ export default async function GlobalLeaderboardPage({
                         </div>
                         <span className="font-medium">{entry.display_name}</span>
                         {entry.is_caller && (
-                          <span className="text-xs rounded-full bg-primary/20 text-primary px-2 py-0.5 font-medium">
+                          <span className="text-xs rounded-full bg-black text-white px-2 py-0.5 font-medium">
                             You
                           </span>
                         )}
@@ -169,7 +169,7 @@ export default async function GlobalLeaderboardPage({
             <div className="flex items-center justify-center gap-3">
               <Link
                 href={`/leaderboard?page=${Math.max(1, page - 1)}`}
-                className={`rounded-md border px-3 py-1.5 text-sm transition-colors ${
+                className={`rounded-lg border border-border px-3 py-1.5 text-sm font-medium transition-colors ${
                   page === 1 ? "pointer-events-none opacity-40" : "hover:bg-muted"
                 }`}
               >
@@ -180,7 +180,7 @@ export default async function GlobalLeaderboardPage({
               </span>
               <Link
                 href={`/leaderboard?page=${Math.min(totalPages, page + 1)}`}
-                className={`rounded-md border px-3 py-1.5 text-sm transition-colors ${
+                className={`rounded-lg border border-border px-3 py-1.5 text-sm font-medium transition-colors ${
                   page === totalPages ? "pointer-events-none opacity-40" : "hover:bg-muted"
                 }`}
               >

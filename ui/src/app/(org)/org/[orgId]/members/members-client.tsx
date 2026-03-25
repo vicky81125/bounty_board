@@ -63,7 +63,7 @@ export function MembersClient({ members, orgId, currentUserId }: Props) {
       <div className="flex justify-end">
         <button
           onClick={() => setShowInvite(true)}
-          className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+          className="rounded-lg btn-pink px-6 py-2 text-sm"
         >
           Invite Member
         </button>
@@ -71,7 +71,7 @@ export function MembersClient({ members, orgId, currentUserId }: Props) {
 
       {showInvite && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-background rounded-lg border shadow-lg p-6 w-full max-w-sm space-y-4">
+          <div className="bg-white rounded-xl border shadow-lg p-6 w-full max-w-sm space-y-4">
             <h2 className="text-lg font-semibold">Invite Member</h2>
             {inviteError && <p className="text-sm text-destructive">{inviteError}</p>}
             <form onSubmit={handleInvite} className="space-y-3">
@@ -107,7 +107,7 @@ export function MembersClient({ members, orgId, currentUserId }: Props) {
                 <button
                   type="submit"
                   disabled={isPending}
-                  className="flex-1 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                  className="flex-1 rounded-lg btn-pink px-3 py-2 text-sm disabled:opacity-50"
                 >
                   {isPending ? "Inviting…" : "Invite"}
                 </button>

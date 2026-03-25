@@ -17,10 +17,10 @@ const STATUS_TABS = [
 ]
 
 const statusColors: Record<string, string> = {
-  pending: "bg-amber-100 text-amber-800",
-  under_review: "bg-blue-100 text-blue-800",
-  scored: "bg-green-100 text-green-800",
-  rejected: "bg-red-100 text-red-800",
+  pending: "bg-muted text-muted-foreground",
+  under_review: "bg-black/5 text-foreground",
+  scored: "bg-black/10 text-black/80",
+  rejected: "bg-destructive/10 text-destructive",
 }
 
 export default async function BountySubmissionsPage({ params, searchParams }: Props) {
@@ -57,7 +57,7 @@ export default async function BountySubmissionsPage({ params, searchParams }: Pr
               href={href}
               className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
                 active
-                  ? "border-primary text-foreground"
+                  ? "border-black font-semibold text-foreground"
                   : "border-transparent text-muted-foreground hover:text-foreground"
               }`}
             >
@@ -116,7 +116,7 @@ export default async function BountySubmissionsPage({ params, searchParams }: Pr
                     ) : sub.status === "under_review" ? (
                       <Link
                         href={`/org/${orgId}/submissions/${bountyId}/${sub.id}/score`}
-                        className="text-xs text-primary hover:underline"
+                        className="text-xs text-foreground underline hover:opacity-70"
                       >
                         Score
                       </Link>
@@ -128,7 +128,7 @@ export default async function BountySubmissionsPage({ params, searchParams }: Pr
                     <div className="flex items-center justify-end gap-2">
                       <Link
                         href={`/org/${orgId}/submissions/${bountyId}/${sub.id}`}
-                        className="text-xs text-primary hover:underline"
+                        className="text-xs text-foreground underline hover:opacity-70"
                       >
                         View
                       </Link>

@@ -156,7 +156,7 @@ export function EditBountyClient({ bounty, orgId }: Props) {
           <div className="flex flex-wrap gap-2">
             {BOUNTY_TAGS.map((tag) => (
               <button key={tag} type="button" onClick={() => toggleTag(tag)}
-                className={`rounded-full px-3 py-1 text-xs border transition-colors ${watchedTags.includes(tag) ? "bg-primary text-primary-foreground border-primary" : "hover:bg-muted"}`}>
+                className={`rounded-full px-3 py-1 text-xs border transition-colors ${watchedTags.includes(tag) ? "bg-black text-white border-black" : "border-border bg-card hover:bg-muted"}`}>
                 {tag}
               </button>
             ))}
@@ -182,7 +182,7 @@ export function EditBountyClient({ bounty, orgId }: Props) {
               <button type="button" onClick={() => removeSkill(i)} className="text-destructive px-2">✕</button>
             </div>
           ))}
-          <button type="button" onClick={() => appendSkill({ value: "" })} className="text-sm text-primary hover:underline">+ Add skill</button>
+          <button type="button" onClick={() => appendSkill({ value: "" })} className="text-sm text-foreground underline hover:opacity-70">+ Add skill</button>
         </div>
       </section>
 
@@ -243,7 +243,7 @@ export function EditBountyClient({ bounty, orgId }: Props) {
               <button type="button" onClick={() => removeResource(i)} className="text-destructive px-2">✕</button>
             </div>
           ))}
-          <button type="button" onClick={() => appendResource({ label: "", url: "" })} className="text-sm text-primary hover:underline">+ Add resource</button>
+          <button type="button" onClick={() => appendResource({ label: "", url: "" })} className="text-sm text-foreground underline hover:opacity-70">+ Add resource</button>
         </div>
       </section>
 
@@ -260,12 +260,12 @@ export function EditBountyClient({ bounty, orgId }: Props) {
             )}
           </div>
         ))}
-        <button type="button" onClick={() => appendRubric({ criterion: "", max_points: 10 })} className="text-sm text-primary hover:underline">+ Add criterion</button>
+        <button type="button" onClick={() => appendRubric({ criterion: "", max_points: 10 })} className="text-sm text-foreground underline hover:opacity-70">+ Add criterion</button>
       </section>
 
       <div className="flex gap-3 pt-4">
         <button type="submit" disabled={isPending}
-          className="rounded-md bg-primary px-6 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50">
+          className="rounded-lg btn-pink px-6 py-2 text-sm disabled:opacity-50">
           {isPending ? "Saving…" : "Save Changes"}
         </button>
         <button type="button" onClick={() => router.back()} className="rounded-md border px-6 py-2 text-sm hover:bg-muted">Cancel</button>

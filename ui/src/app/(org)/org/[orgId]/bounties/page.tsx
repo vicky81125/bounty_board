@@ -3,8 +3,8 @@ import Link from "next/link"
 
 const statusColors: Record<string, string> = {
   draft: "bg-muted text-muted-foreground",
-  open: "bg-green-100 text-green-800",
-  closed: "bg-gray-100 text-gray-600",
+  open: "bg-black/10 text-black/80",
+  closed: "bg-muted text-muted-foreground",
 }
 
 interface Props {
@@ -22,7 +22,7 @@ export default async function OrgBountiesPage({ params }: Props) {
         <h1 className="text-2xl font-bold">Bounties</h1>
         <Link
           href={`/org/${orgId}/bounties/new`}
-          className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+          className="rounded-lg btn-pink px-6 py-2 text-sm"
         >
           + New Bounty
         </Link>
@@ -51,7 +51,7 @@ export default async function OrgBountiesPage({ params }: Props) {
                 </span>
                 <Link
                   href={`/org/${orgId}/bounties/${b.id}/edit`}
-                  className="text-xs text-primary hover:underline"
+                  className="text-xs text-foreground underline hover:opacity-70"
                 >
                   Edit
                 </Link>

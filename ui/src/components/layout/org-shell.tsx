@@ -44,13 +44,13 @@ export function OrgShell({ user, children, orgId, orgRole }: OrgShellProps) {
   return (
     <div className="min-h-screen flex">
       {/* Sidebar */}
-      <aside className="w-60 border-r bg-background flex flex-col shrink-0">
-        <div className="p-4 border-b">
+      <aside className="w-60 bg-black flex flex-col shrink-0">
+        <div className="p-4 border-b border-white/10">
           <Link
             href={orgId ? `/org/${orgId}/dashboard` : "/org/dashboard"}
-            className="flex items-center gap-2 font-semibold"
+            className="flex items-center gap-2 font-bold text-white"
           >
-            <Building2 className="h-5 w-5" />
+            <Building2 className="h-5 w-5 text-white" />
             <span>Bounty Board</span>
           </Link>
         </div>
@@ -63,8 +63,8 @@ export function OrgShell({ user, children, orgId, orgRole }: OrgShellProps) {
               className={cn(
                 "flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors",
                 pathname.startsWith(href)
-                  ? "bg-accent text-accent-foreground font-medium"
-                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                  ? "bg-white/10 text-white font-semibold"
+                  : "text-white/70 hover:bg-white/10 hover:text-white",
               )}
             >
               <Icon className="h-4 w-4" />
@@ -73,12 +73,12 @@ export function OrgShell({ user, children, orgId, orgRole }: OrgShellProps) {
           ))}
         </nav>
 
-        <div className="p-4 border-t space-y-2">
-          <p className="text-sm font-medium truncate">{user.display_name}</p>
-          <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+        <div className="p-4 border-t border-white/10 space-y-2">
+          <p className="text-sm font-medium text-white truncate">{user.display_name}</p>
+          <p className="text-xs text-white/60 truncate">{user.email}</p>
           <button
             onClick={handleSignOut}
-            className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors w-full mt-1"
+            className="flex items-center gap-1.5 text-sm text-white/60 hover:text-white transition-colors w-full mt-1"
           >
             <LogOut className="h-4 w-4" />
             Sign out

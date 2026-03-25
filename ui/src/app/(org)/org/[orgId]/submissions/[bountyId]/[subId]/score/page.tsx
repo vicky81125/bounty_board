@@ -38,14 +38,14 @@ export default async function ScorePage({ params }: Props) {
         >
           ← Back to submission
         </Link>
-        <div className="rounded-lg border border-amber-200 bg-amber-50 p-6 text-center space-y-3">
-          <p className="font-medium text-amber-900">Cannot score this submission yet.</p>
-          <p className="text-sm text-amber-700">
+        <div className="rounded-lg border border-border bg-muted p-6 text-center space-y-3">
+          <p className="font-medium text-foreground">Cannot score this submission yet.</p>
+          <p className="text-sm text-muted-foreground">
             Mark the submission as <strong>Under Review</strong> before scoring.
           </p>
           <Link
             href={`/org/${orgId}/submissions/${bountyId}/${subId}`}
-            className="inline-block text-sm text-primary hover:underline"
+            className="inline-block text-sm text-foreground underline hover:opacity-70"
           >
             ← Go back and update status
           </Link>

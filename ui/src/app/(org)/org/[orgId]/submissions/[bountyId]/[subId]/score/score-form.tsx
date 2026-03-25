@@ -108,8 +108,8 @@ export function ScoreForm({
                     step={1}
                     value={scores[i]?.score ?? 0}
                     onChange={(e) => handleScoreChange(i, e.target.value)}
-                    className={`w-20 rounded-md border px-2 py-1 text-sm text-right focus:outline-none focus:ring-2 focus:ring-primary ${
-                      isOverMax ? "border-red-500 focus:ring-red-500" : "border-input"
+                    className={`w-20 rounded-md border px-2 py-1 text-sm text-right focus:outline-none focus:ring-2 focus:ring-ring ${
+                      isOverMax ? "border-destructive focus:ring-destructive" : "border-input"
                     }`}
                   />
                   <span className="text-sm text-muted-foreground w-16 text-right">
@@ -124,15 +124,13 @@ export function ScoreForm({
         <div className="border-t pt-4 space-y-3">
           <div className="flex items-center justify-between text-sm font-medium">
             <span>Total</span>
-            <span className={totalScore > maxPossible ? "text-red-600" : ""}>
+            <span className={totalScore > maxPossible ? "text-destructive" : ""}>
               {totalScore} / {maxPossible}
             </span>
           </div>
           <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
             <div
-              className={`h-2 rounded-full transition-all ${
-                percentage >= 80 ? "bg-green-500" : percentage >= 50 ? "bg-amber-500" : "bg-red-500"
-              }`}
+              className="h-2 rounded-full transition-all bg-foreground/40"
               style={{ width: `${Math.min(percentage, 100)}%` }}
             />
           </div>
@@ -152,7 +150,7 @@ export function ScoreForm({
       </div>
 
       {error && (
-        <p className="text-sm text-red-600 rounded-md border border-red-200 bg-red-50 px-3 py-2">
+        <p className="text-sm text-destructive rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2">
           {error}
         </p>
       )}
@@ -160,7 +158,7 @@ export function ScoreForm({
       <button
         type="submit"
         disabled={isPending || scores.some((s) => Number(s.score) > s.max_points)}
-        className="rounded-md bg-primary px-5 py-2 text-sm font-medium text-primary-foreground transition-opacity disabled:opacity-50 hover:opacity-90"
+        className="rounded-lg btn-pink px-6 py-2 text-sm disabled:opacity-50"
       >
         {isPending ? "Saving..." : isOverride ? "Override Score" : "Save Score"}
       </button>

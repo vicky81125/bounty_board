@@ -24,8 +24,8 @@ const STATUS_TABS = ["all", "draft", "open", "closed"] as const
 
 const statusColors: Record<string, string> = {
   draft: "bg-muted text-muted-foreground",
-  open: "bg-green-100 text-green-800",
-  closed: "bg-gray-100 text-gray-600",
+  open: "bg-black/10 text-black/80",
+  closed: "bg-muted text-muted-foreground",
 }
 
 export function OrgDashboardClient({ bounties, orgId, activeTab }: Props) {
@@ -63,7 +63,7 @@ export function OrgDashboardClient({ bounties, orgId, activeTab }: Props) {
             href={`/org/${orgId}/dashboard${tab !== "all" ? `?status=${tab}` : ""}`}
             className={`px-4 py-2 text-sm capitalize border-b-2 -mb-px transition-colors ${
               activeTab === tab
-                ? "border-primary font-medium text-foreground"
+                ? "border-black font-semibold text-foreground"
                 : "border-transparent text-muted-foreground hover:text-foreground"
             }`}
           >
@@ -75,7 +75,7 @@ export function OrgDashboardClient({ bounties, orgId, activeTab }: Props) {
       {bounties.length === 0 ? (
         <div className="rounded-lg border border-dashed p-10 text-center text-muted-foreground">
           No bounties yet.{" "}
-          <Link href={`/org/${orgId}/bounties/new`} className="text-primary underline">
+          <Link href={`/org/${orgId}/bounties/new`} className="text-foreground underline hover:opacity-70">
             Create your first bounty
           </Link>
         </div>
@@ -110,7 +110,7 @@ export function OrgDashboardClient({ bounties, orgId, activeTab }: Props) {
                     <div className="flex items-center gap-3">
                       <Link
                         href={`/org/${orgId}/bounties/${b.id}/edit`}
-                        className="text-xs text-primary hover:underline"
+                        className="text-xs text-foreground underline hover:opacity-70"
                       >
                         Edit
                       </Link>
@@ -118,7 +118,7 @@ export function OrgDashboardClient({ bounties, orgId, activeTab }: Props) {
                         <button
                           onClick={() => changeStatus(b.id, "open")}
                           disabled={isPending}
-                          className="text-xs text-green-700 hover:underline disabled:opacity-50"
+                          className="text-xs text-foreground hover:underline disabled:opacity-50"
                         >
                           Open
                         </button>

@@ -16,7 +16,7 @@ export default async function OrgSubmissionsPage({ params }: Props) {
         <h1 className="text-2xl font-bold">Submissions</h1>
         <p className="text-muted-foreground text-sm">
           No bounties yet.{" "}
-          <Link href={`/org/${orgId}/bounties/new`} className="text-primary hover:underline">
+          <Link href={`/org/${orgId}/bounties/new`} className="text-foreground underline hover:opacity-70">
             Create one
           </Link>{" "}
           to start receiving submissions.
@@ -40,10 +40,10 @@ export default async function OrgSubmissionsPage({ params }: Props) {
               <span
                 className={`text-xs rounded-full px-2 py-0.5 capitalize ${
                   b.status === "open"
-                    ? "bg-green-100 text-green-800"
+                    ? "bg-black/10 text-black/80"
                     : b.status === "draft"
-                      ? "bg-gray-100 text-gray-600"
-                      : "bg-amber-100 text-amber-800"
+                      ? "bg-muted text-muted-foreground"
+                      : "bg-muted text-muted-foreground"
                 }`}
               >
                 {b.status}

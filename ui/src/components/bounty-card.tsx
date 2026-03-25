@@ -14,9 +14,9 @@ interface BountyCardProps {
 }
 
 const difficultyStyles: Record<string, string> = {
-  easy: "bg-green-100 text-green-800",
-  medium: "bg-amber-100 text-amber-800",
-  hard: "bg-red-100 text-red-800",
+  easy: "bg-black/5 text-black/70",
+  medium: "bg-black/10 text-black/80",
+  hard: "bg-black/20 text-black/90",
 }
 
 function deadlineLabel(endDate: string | null | undefined): string | null {
@@ -43,13 +43,13 @@ export function BountyCard({
   return (
     <Link
       href={`/bounties/${id}`}
-      className="block rounded-lg border bg-card hover:border-primary/50 transition-colors p-5 space-y-3"
+      className="block rounded-xl border bg-card hover:shadow-md hover:border-border/80 transition-all p-5 space-y-3"
     >
       <div className="flex items-start justify-between gap-2">
-        <h3 className="font-semibold text-sm leading-snug line-clamp-2">{title}</h3>
+        <h3 className="font-bold text-base leading-snug line-clamp-2">{title}</h3>
         <span
           className={cn(
-            "shrink-0 rounded-full px-2 py-0.5 text-xs font-medium capitalize",
+            "shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium capitalize",
             difficultyStyles[difficulty] ?? "bg-muted text-muted-foreground"
           )}
         >
@@ -64,7 +64,7 @@ export function BountyCard({
           {tags.slice(0, 3).map((tag) => (
             <span
               key={tag}
-              className="rounded-full bg-secondary px-2 py-0.5 text-xs text-secondary-foreground"
+              className="rounded-full border border-border px-2.5 py-0.5 text-xs"
             >
               {tag}
             </span>
@@ -74,7 +74,7 @@ export function BountyCard({
 
       <div className="flex items-center justify-between text-xs text-muted-foreground">
         <div className="flex items-center gap-3">
-          {prizeSummary && <span className="font-medium text-foreground">{prizeSummary}</span>}
+          {prizeSummary && <span className="text-lg font-bold text-foreground">{prizeSummary}</span>}
           {deadline && (
             <span className={deadline === "Ended" ? "text-destructive" : ""}>
               {deadline}
@@ -84,7 +84,7 @@ export function BountyCard({
         <div className="flex items-center gap-2">
           <span>{submissionCount !== null ? `${submissionCount} submissions` : "—"}</span>
           {status === "closed" && (
-            <span className="rounded-full bg-muted px-2 py-0.5 text-xs">Closed</span>
+            <span className="rounded-full bg-black text-white text-xs px-2.5 py-0.5 font-medium">Closed</span>
           )}
         </div>
       </div>

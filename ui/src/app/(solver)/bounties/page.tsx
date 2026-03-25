@@ -35,7 +35,7 @@ export default async function BountiesPage({ searchParams }: Props) {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Bounties</h1>
+      <h1 className="text-3xl font-bold">Bounties</h1>
 
       <Suspense fallback={null}>
         <BountyFilters
@@ -106,7 +106,7 @@ function PaginationLink({
   return (
     <Link
       href={`/bounties?${p.toString()}`}
-      className="rounded-md border px-3 py-1 hover:bg-muted transition-colors"
+      className="rounded-lg border border-border px-3 py-1.5 text-sm font-medium hover:bg-muted transition-colors"
     >
       {label}
     </Link>

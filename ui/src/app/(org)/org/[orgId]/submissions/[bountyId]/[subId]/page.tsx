@@ -10,10 +10,10 @@ interface Props {
 }
 
 const statusColors: Record<string, string> = {
-  pending: "bg-amber-100 text-amber-800",
-  under_review: "bg-blue-100 text-blue-800",
-  scored: "bg-green-100 text-green-800",
-  rejected: "bg-red-100 text-red-800",
+  pending: "bg-muted text-muted-foreground",
+  under_review: "bg-black/5 text-foreground",
+  scored: "bg-black/10 text-black/80",
+  rejected: "bg-destructive/10 text-destructive",
 }
 
 export default async function SubmissionDetailPage({ params }: Props) {
@@ -86,7 +86,7 @@ export default async function SubmissionDetailPage({ params }: Props) {
                 href={submission.external_url ?? "#"}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-sm text-primary hover:underline break-all"
+                className="text-sm text-foreground underline hover:opacity-70 break-all"
               >
                 {submission.external_url}
               </a>
@@ -138,7 +138,7 @@ export default async function SubmissionDetailPage({ params }: Props) {
               {submission.status === "under_review" && (
                 <Link
                   href={`/org/${orgId}/submissions/${bountyId}/${subId}/score`}
-                  className="inline-block w-full text-center rounded-md bg-primary px-3 py-2 text-xs font-medium text-primary-foreground hover:opacity-90 transition-opacity"
+                  className="inline-block w-full text-center rounded-lg btn-pink px-3 py-2 text-xs"
                 >
                   Score Submission
                 </Link>
@@ -148,13 +148,13 @@ export default async function SubmissionDetailPage({ params }: Props) {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-muted-foreground">Score</span>
-                    <span className="rounded-full bg-green-100 text-green-800 px-2.5 py-0.5 text-xs font-semibold tabular-nums">
+                    <span className="rounded-full bg-black/10 text-black/80 px-2.5 py-0.5 text-xs font-semibold tabular-nums">
                       {submission.total_score} / {submission.max_possible_score}
                     </span>
                   </div>
                   <Link
                     href={`/org/${orgId}/submissions/${bountyId}/${subId}/score`}
-                    className="inline-block text-xs text-primary hover:underline"
+                    className="inline-block text-xs text-foreground underline hover:opacity-70"
                   >
                     Revise Score
                   </Link>

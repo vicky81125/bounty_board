@@ -40,7 +40,7 @@ export default async function OrgDashboardPage() {
   return (
     <OrgShell user={authUser}>
       <div className="space-y-4">
-        <h1 className="text-2xl font-bold">Organizer Dashboard</h1>
+        <h1 className="text-3xl font-bold">Organizer Dashboard</h1>
         <p className="text-muted-foreground">
           Create and manage your organisation to start posting bounties.
         </p>
@@ -50,7 +50,7 @@ export default async function OrgDashboardPage() {
           </p>
           <Link
             href="/org/new"
-            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+            className="inline-flex items-center justify-center rounded-lg btn-pink px-6 py-2 text-sm"
           >
             Create your first organisation
           </Link>

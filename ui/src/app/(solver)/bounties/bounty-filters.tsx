@@ -52,7 +52,7 @@ export function BountyFilters({ search, status, difficulty, tags, sort }: Props)
           const t = setTimeout(() => update("search", val || undefined), 300)
           return () => clearTimeout(t)
         }}
-        className="w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+        className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-foreground"
       />
 
       {/* Filters row */}
@@ -61,7 +61,7 @@ export function BountyFilters({ search, status, difficulty, tags, sort }: Props)
         <select
           value={status ?? ""}
           onChange={(e) => update("status", e.target.value || undefined)}
-          className="rounded-md border px-3 py-1.5 text-sm bg-background"
+          className="rounded-lg border border-border px-3 py-1.5 text-sm bg-card"
         >
           <option value="">All statuses</option>
           <option value="open">Open</option>
@@ -72,7 +72,7 @@ export function BountyFilters({ search, status, difficulty, tags, sort }: Props)
         <select
           value={difficulty ?? ""}
           onChange={(e) => update("difficulty", e.target.value || undefined)}
-          className="rounded-md border px-3 py-1.5 text-sm bg-background"
+          className="rounded-lg border border-border px-3 py-1.5 text-sm bg-card"
         >
           <option value="">Any difficulty</option>
           <option value="easy">Easy</option>
@@ -84,7 +84,7 @@ export function BountyFilters({ search, status, difficulty, tags, sort }: Props)
         <select
           value={sort ?? "newest"}
           onChange={(e) => update("sort", e.target.value)}
-          className="rounded-md border px-3 py-1.5 text-sm bg-background"
+          className="rounded-lg border border-border px-3 py-1.5 text-sm bg-card"
         >
           <option value="newest">Newest first</option>
           <option value="deadline">Deadline</option>
@@ -98,10 +98,10 @@ export function BountyFilters({ search, status, difficulty, tags, sort }: Props)
             key={tag}
             type="button"
             onClick={() => toggleTag(tag)}
-            className={`rounded-full px-2.5 py-1 text-xs border transition-colors ${
+            className={`rounded-full px-2.5 py-1 text-xs font-medium border transition-colors ${
               selectedTags.includes(tag)
-                ? "bg-primary text-primary-foreground border-primary"
-                : "hover:bg-muted"
+                ? "bg-black text-white border-black"
+                : "border-border bg-card hover:bg-muted"
             }`}
           >
             {tag}

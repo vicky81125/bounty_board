@@ -109,7 +109,7 @@ export function EditSubmissionForm({
                 type="button"
                 onClick={handleDownload}
                 disabled={downloadPending}
-                className="text-xs text-primary hover:underline disabled:opacity-50"
+                className="text-xs text-foreground underline hover:opacity-70 disabled:opacity-50"
               >
                 {downloadPending ? "Getting link…" : "Download"}
               </button>
@@ -164,7 +164,7 @@ export function EditSubmissionForm({
       <button
         type="submit"
         disabled={isPending}
-        className="rounded-md bg-primary px-6 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+        className="rounded-lg btn-pink px-6 py-2 text-sm disabled:opacity-50"
       >
         {isPending ? "Saving…" : "Save Changes"}
       </button>

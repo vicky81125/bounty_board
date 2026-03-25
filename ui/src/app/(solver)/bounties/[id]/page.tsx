@@ -21,16 +21,16 @@ interface Props {
 }
 
 const difficultyColors: Record<string, string> = {
-  easy: "bg-green-100 text-green-800",
-  medium: "bg-amber-100 text-amber-800",
-  hard: "bg-red-100 text-red-800",
+  easy: "bg-black/5 text-black/70",
+  medium: "bg-black/10 text-black/80",
+  hard: "bg-black/20 text-black/90",
 }
 
 const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
-  pending: { label: "Awaiting Review", color: "bg-amber-100 text-amber-800 border-amber-200" },
-  under_review: { label: "Under Review", color: "bg-blue-100 text-blue-800 border-blue-200" },
-  scored: { label: "Scored", color: "bg-green-100 text-green-800 border-green-200" },
-  rejected: { label: "Rejected", color: "bg-red-100 text-red-800 border-red-200" },
+  pending: { label: "Awaiting Review", color: "bg-muted text-muted-foreground border-border" },
+  under_review: { label: "Under Review", color: "bg-black/5 text-foreground border-border" },
+  scored: { label: "Scored", color: "bg-black/10 text-foreground border-border" },
+  rejected: { label: "Rejected", color: "bg-destructive/10 text-destructive border-destructive/20" },
 }
 
 function formatDate(d: string | null): string {
@@ -95,21 +95,21 @@ export default async function BountyDetailPage({ params, searchParams }: Props) 
             {bounty.difficulty}
           </span>
           <span
-            className={`rounded-full px-2 py-0.5 text-xs font-medium capitalize ${
-              bounty.status === "open" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-600"
+            className={`rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${
+              bounty.status === "open" ? "bg-black text-white" : "bg-muted text-muted-foreground"
             }`}
           >
             {bounty.status}
           </span>
           {(bounty.tags ?? []).map((t: string) => (
-            <span key={t} className="rounded-full bg-secondary px-2 py-0.5 text-xs">
+            <span key={t} className="rounded-full border border-border px-2.5 py-0.5 text-xs">
               {t}
             </span>
           ))}
         </div>
         <h1 className="text-3xl font-bold">{bounty.title}</h1>
         <p className="text-muted-foreground">{orgName}</p>
-        {bounty.prize && <p className="text-xl font-semibold">{bounty.prize.label}</p>}
+        {bounty.prize && <p className="text-2xl font-bold">{bounty.prize.label}</p>}
       </div>
 
       <nav className="flex border-b gap-0">
@@ -125,7 +125,7 @@ export default async function BountyDetailPage({ params, searchParams }: Props) 
             href={key === "details" ? `/bounties/${id}` : `/bounties/${id}?tab=${key}`}
             className={`px-5 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
               validTab === key
-                ? "border-primary text-foreground"
+                ? "border-black text-foreground font-semibold"
                 : "border-transparent text-muted-foreground hover:text-foreground"
             }`}
           >
@@ -187,7 +187,7 @@ function DetailsTab({
         {deadline && (
           <div>
             <p className="font-medium text-foreground">Status</p>
-            <p className={deadline === "Ended" ? "text-destructive" : "text-green-700"}>
+            <p className={deadline === "Ended" ? "text-destructive" : "text-foreground"}>
               {deadline}
             </p>
           </div>
@@ -234,7 +234,7 @@ function DetailsTab({
         <h2 className="text-lg font-semibold">Submission Format</h2>
         <div className="flex gap-2 flex-wrap">
           {(bounty.submission_formats ?? []).map((f: string) => (
-            <span key={f} className="rounded-md bg-secondary px-3 py-1 text-sm">
+            <span key={f} className="rounded-lg border border-border bg-card px-3 py-1 text-sm">
               {f === "zip" ? "Zip file" : f === "github_url" ? "GitHub URL" : "Drive URL"}
             </span>
           ))}
@@ -281,7 +281,7 @@ function DetailsTab({
                   href={r.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-sm text-primary hover:underline"
+                  className="text-sm text-foreground hover:underline"
                 >
                   {r.label}
                 </a>
@@ -317,7 +317,7 @@ function SubmissionsTab({
       <div className="py-12 text-center text-sm text-muted-foreground">
         You haven&apos;t submitted anything yet.{" "}
         {bountyStatus === "open" && (
-          <Link href={`/bounties/${bountyId}/submit`} className="text-primary hover:underline">
+          <Link href={`/bounties/${bountyId}/submit`} className="text-foreground underline hover:opacity-70">
             Submit a solution
           </Link>
         )}
@@ -366,13 +366,13 @@ function SubmissionsTab({
                   </span>
                 </div>
                 <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
-                  <div className="h-1.5 rounded-full bg-green-500" style={{ width: `${pct}%` }} />
+                  <div className="h-1.5 rounded-full bg-foreground/40" style={{ width: `${pct}%` }} />
                 </div>
               </div>
             )}
 
             {sub.status === "under_review" && (
-              <p className="text-xs text-blue-700 bg-blue-50 border border-blue-200 rounded px-3 py-1.5">
+              <p className="text-xs text-foreground/70 bg-muted border border-border rounded-lg px-3 py-1.5">
                 Under review — score will appear here once grading is complete.
               </p>
             )}
@@ -388,7 +388,7 @@ function SubmissionsTab({
               <span className="capitalize">{sub.submission_type.replace("_", " ")}</span>
               <Link
                 href={`/bounties/${bountyId}/my-submission`}
-                className="text-primary hover:underline"
+                className="text-foreground underline hover:opacity-70"
               >
                 View details →
               </Link>
@@ -410,7 +410,7 @@ function SubmitCTA({
   submission: any
 }) {
   const primary =
-    "rounded-md px-6 py-2 text-sm font-medium transition-colors bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed"
+    "rounded-lg px-6 py-2 text-sm btn-pink disabled:opacity-40 disabled:cursor-not-allowed"
 
   if (bountyStatus !== "open" && !submission) {
     return (
