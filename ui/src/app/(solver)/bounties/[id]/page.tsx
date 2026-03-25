@@ -40,16 +40,31 @@ interface Submission {
   id: string
   status: "pending" | "under_review" | "scored" | "rejected"
   attempt_number: number
+  submission_type: "zip" | "github_url" | "drive_url"
+  external_url: string | null
+  description: string
+  submitted_at: string
+  total_score: number | null
+  max_possible_score: number | null
+  review_notes: string | null
 }
 
 interface Props {
   params: Promise<{ id: string }>
+  searchParams: Promise<{ tab?: string }>
 }
 
 const difficultyColors: Record<string, string> = {
   easy: "bg-green-100 text-green-800",
   medium: "bg-amber-100 text-amber-800",
   hard: "bg-red-100 text-red-800",
+}
+
+const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
+  pending: { label: "Awaiting Review", color: "bg-amber-100 text-amber-800 border-amber-200" },
+  under_review: { label: "Under Review", color: "bg-blue-100 text-blue-800 border-blue-200" },
+  scored: { label: "Scored", color: "bg-green-100 text-green-800 border-green-200" },
+  rejected: { label: "Rejected", color: "bg-red-100 text-red-800 border-red-200" },
 }
 
 function formatDate(d: string | null): string {
@@ -65,8 +80,10 @@ function daysLeft(end: string | null): string | null {
   return `Closes in ${days} day${days === 1 ? "" : "s"}`
 }
 
-export default async function BountyDetailPage({ params }: Props) {
+export default async function BountyDetailPage({ params, searchParams }: Props) {
   const { id } = await params
+  const { tab = "details" } = await searchParams
+
   const [bounty, session] = await Promise.all([
     serverFetch<Bounty>(`/bounties/${id}`),
     getServerSession(),
@@ -74,16 +91,21 @@ export default async function BountyDetailPage({ params }: Props) {
   if (!bounty) notFound()
 
   const isParticipant = session?.user.account_type === "participant"
-  // Fetch participant's current submission (null if none or if organizer)
-  const mySubmission = isParticipant
-    ? await serverFetch<Submission>(`/bounties/${id}/submissions/mine`, { noCache: true })
-    : null
+
+  // Fetch submissions in parallel — latest for CTA, all for the tab
+  const [mySubmission, myAllSubmissions] = isParticipant
+    ? await Promise.all([
+        serverFetch<Submission>(`/bounties/${id}/submissions/mine`, { noCache: true }),
+        serverFetch<Submission[]>(`/bounties/${id}/submissions/mine/all`, { noCache: true }),
+      ])
+    : [null, null]
 
   const deadline = daysLeft(bounty.end_date)
+  const validTab = ["details", "leaderboard", "submissions"].includes(tab) ? tab : "details"
 
   return (
-    <article className="max-w-3xl space-y-8">
-      {/* Header */}
+    <article className="max-w-3xl space-y-4">
+      {/* Header — always visible */}
       <div className="space-y-3">
         <div className="flex flex-wrap items-center gap-2">
           <span
@@ -104,16 +126,79 @@ export default async function BountyDetailPage({ params }: Props) {
             </span>
           ))}
         </div>
-
         <h1 className="text-3xl font-bold">{bounty.title}</h1>
         <p className="text-muted-foreground">{bounty.org_name}</p>
-
-        {bounty.prize && (
-          <p className="text-xl font-semibold">{bounty.prize.label}</p>
-        )}
+        {bounty.prize && <p className="text-xl font-semibold">{bounty.prize.label}</p>}
       </div>
 
-      {/* Dates */}
+      {/* Tabs — right below the header */}
+      <nav className="flex border-b gap-0">
+        {(
+          [
+            { key: "details", label: "Details" },
+            { key: "leaderboard", label: "Leaderboard" },
+            ...(isParticipant ? [{ key: "submissions", label: "My Submissions" }] : []),
+          ] as { key: string; label: string }[]
+        ).map(({ key, label }) => (
+          <Link
+            key={key}
+            href={key === "details" ? `/bounties/${id}` : `/bounties/${id}?tab=${key}`}
+            className={`px-5 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
+              validTab === key
+                ? "border-primary text-foreground"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {label}
+          </Link>
+        ))}
+      </nav>
+
+      {/* Tab content */}
+      {validTab === "details" && (
+        <DetailsTab
+          bounty={bounty}
+          deadline={deadline}
+          isParticipant={isParticipant}
+          submission={mySubmission}
+          bountyId={id}
+        />
+      )}
+
+      {validTab === "leaderboard" && (
+        <BountyLeaderboard bountyId={id} />
+      )}
+
+      {validTab === "submissions" && isParticipant && (
+        <SubmissionsTab
+          bountyId={id}
+          submissions={myAllSubmissions ?? []}
+          bountyStatus={bounty.status}
+          submission={mySubmission}
+        />
+      )}
+    </article>
+  )
+}
+
+// ── Details tab ───────────────────────────────────────────────────────────────
+
+function DetailsTab({
+  bounty,
+  deadline,
+  isParticipant,
+  submission,
+  bountyId,
+}: {
+  bounty: Bounty
+  deadline: string | null
+  isParticipant: boolean
+  submission: Submission | null
+  bountyId: string
+}) {
+  return (
+    <div className="space-y-8">
+      {/* Dates bar */}
       <div className="flex gap-6 text-sm text-muted-foreground border rounded-lg p-4">
         <div>
           <p className="font-medium text-foreground">Start</p>
@@ -133,7 +218,19 @@ export default async function BountyDetailPage({ params }: Props) {
         )}
       </div>
 
-      {/* Description */}
+      {/* CTA */}
+      {isParticipant && (
+        <div className="flex flex-wrap gap-3 items-center">
+          <SubmitCTA
+            bountyId={bountyId}
+            bountyStatus={bounty.status}
+            submission={submission}
+          />
+          <button className="rounded-md border px-6 py-2 text-sm hover:bg-muted">
+            Copy for AI
+          </button>
+        </div>
+      )}
       {bounty.description_md && (
         <section className="space-y-2">
           <h2 className="text-lg font-semibold">Description</h2>
@@ -143,7 +240,6 @@ export default async function BountyDetailPage({ params }: Props) {
         </section>
       )}
 
-      {/* Ideal Output */}
       {bounty.ideal_output_md && (
         <section className="space-y-2">
           <h2 className="text-lg font-semibold">Ideal Output</h2>
@@ -153,7 +249,6 @@ export default async function BountyDetailPage({ params }: Props) {
         </section>
       )}
 
-      {/* Skills */}
       {bounty.skills_required.length > 0 && (
         <section className="space-y-2">
           <h2 className="text-lg font-semibold">Skills Required</h2>
@@ -165,7 +260,6 @@ export default async function BountyDetailPage({ params }: Props) {
         </section>
       )}
 
-      {/* Submission Formats */}
       <section className="space-y-2">
         <h2 className="text-lg font-semibold">Submission Format</h2>
         <div className="flex gap-2 flex-wrap">
@@ -177,7 +271,6 @@ export default async function BountyDetailPage({ params }: Props) {
         </div>
       </section>
 
-      {/* Rubric */}
       {bounty.rubric.length > 0 && (
         <section className="space-y-2">
           <h2 className="text-lg font-semibold">Scoring Rubric</h2>
@@ -208,7 +301,6 @@ export default async function BountyDetailPage({ params }: Props) {
         </section>
       )}
 
-      {/* Resources */}
       {bounty.resources.length > 0 && (
         <section className="space-y-2">
           <h2 className="text-lg font-semibold">Resources</h2>
@@ -229,52 +321,139 @@ export default async function BountyDetailPage({ params }: Props) {
         </section>
       )}
 
-      {/* Eligibility */}
       {bounty.eligibility_notes && (
         <section className="space-y-2">
           <h2 className="text-lg font-semibold">Eligibility</h2>
           <p className="text-sm text-muted-foreground">{bounty.eligibility_notes}</p>
         </section>
       )}
-
-      {/* Actions */}
-      <div className="flex gap-3 pt-2 border-t">
-        <SubmitCTA
-          bountyId={id}
-          bountyStatus={bounty.status}
-          isParticipant={isParticipant}
-          submission={mySubmission}
-        />
-        <button className="rounded-md border px-6 py-2 text-sm hover:bg-muted">
-          Copy for AI
-        </button>
-      </div>
-
-      {/* Leaderboard */}
-      <BountyLeaderboard bountyId={id} />
-    </article>
+    </div>
   )
 }
+
+// ── My Submissions tab ────────────────────────────────────────────────────────
+
+function SubmissionsTab({
+  bountyId,
+  submissions,
+  bountyStatus,
+  submission,
+}: {
+  bountyId: string
+  submissions: Submission[]
+  bountyStatus: string
+  submission: Submission | null
+}) {
+  if (submissions.length === 0) {
+    return (
+      <div className="py-12 text-center text-sm text-muted-foreground">
+        You haven&apos;t submitted anything yet.{" "}
+        {bountyStatus === "open" && (
+          <Link href={`/bounties/${bountyId}/submit`} className="text-primary hover:underline">
+            Submit a solution
+          </Link>
+        )}
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Action row */}
+      <div className="flex flex-wrap gap-3 items-center pb-2">
+        <SubmitCTA bountyId={bountyId} bountyStatus={bountyStatus} submission={submission} />
+      </div>
+
+      {submissions.map((sub) => {
+        const cfg = STATUS_CONFIG[sub.status] ?? STATUS_CONFIG.pending
+        const pct =
+          sub.total_score != null && sub.max_possible_score
+            ? ((sub.total_score / sub.max_possible_score) * 100).toFixed(1)
+            : null
+
+        return (
+          <div key={sub.id} className="rounded-lg border p-4 space-y-3">
+            {/* Top row: attempt + date + status */}
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div>
+                <span className="font-medium text-sm">Attempt #{sub.attempt_number}</span>
+                <span className="text-xs text-muted-foreground ml-2">
+                  {new Date(sub.submitted_at).toLocaleDateString(undefined, { dateStyle: "medium" })}
+                </span>
+              </div>
+              <span
+                className={`inline-flex items-center rounded-full border px-3 py-0.5 text-xs font-medium ${cfg.color}`}
+              >
+                {cfg.label}
+              </span>
+            </div>
+
+            {/* Score */}
+            {sub.status === "scored" && sub.total_score != null && (
+              <div className="space-y-1.5">
+                <div className="flex items-baseline justify-between text-sm">
+                  <span className="text-muted-foreground">Score</span>
+                  <span className="font-semibold tabular-nums">
+                    {sub.total_score} / {sub.max_possible_score} pts
+                    {pct && <span className="ml-2 text-xs text-muted-foreground">({pct}%)</span>}
+                  </span>
+                </div>
+                <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
+                  <div
+                    className="h-1.5 rounded-full bg-green-500"
+                    style={{ width: `${pct}%` }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Under review info */}
+            {sub.status === "under_review" && (
+              <p className="text-xs text-blue-700 bg-blue-50 border border-blue-200 rounded px-3 py-1.5">
+                Under review — score will appear here once grading is complete.
+              </p>
+            )}
+
+            {/* Rejection notes */}
+            {sub.status === "rejected" && sub.review_notes && (
+              <p className="text-xs text-destructive bg-destructive/5 border border-destructive/20 rounded px-3 py-1.5">
+                <span className="font-medium">Rejected: </span>
+                {sub.review_notes}
+              </p>
+            )}
+
+            {/* Submission type + link */}
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span className="capitalize">{sub.submission_type.replace("_", " ")}</span>
+              <Link
+                href={`/bounties/${bountyId}/my-submission`}
+                className="text-primary hover:underline"
+              >
+                View details →
+              </Link>
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+// ── Submit CTA ────────────────────────────────────────────────────────────────
 
 function SubmitCTA({
   bountyId,
   bountyStatus,
-  isParticipant,
   submission,
 }: {
   bountyId: string
   bountyStatus: string
-  isParticipant: boolean
   submission: Submission | null
 }) {
-  const btnBase =
-    "rounded-md px-6 py-2 text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-  const primary = `${btnBase} bg-primary text-primary-foreground hover:bg-primary/90`
+  const primary =
+    "rounded-md px-6 py-2 text-sm font-medium transition-colors bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed"
 
-  // Organizers don't see a submit CTA
-  if (!isParticipant) return null
-
-  if (bountyStatus !== "open") {
+  if (bountyStatus !== "open" && !submission) {
     return (
       <button disabled className={primary}>
         Bounty Closed
@@ -290,26 +469,38 @@ function SubmitCTA({
     )
   }
 
-  if (submission.status === "pending") {
-    return (
-      <Link href={`/bounties/${bountyId}/my-submission`} className={primary}>
-        Edit Submission
-      </Link>
-    )
-  }
+  const cfg = STATUS_CONFIG[submission.status]
 
-  if (submission.status === "rejected") {
-    return (
-      <Link href={`/bounties/${bountyId}/submit`} className={primary}>
-        Submit Again
-      </Link>
-    )
-  }
-
-  // under_review or scored
   return (
-    <button disabled className={primary} title="Under review">
-      Submission Submitted
-    </button>
+    <div className="flex flex-wrap gap-3 items-center">
+      <span
+        className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium ${cfg.color}`}
+      >
+        {cfg.label}
+      </span>
+      {submission.status === "scored" && submission.total_score != null && (
+        <span className="text-sm font-semibold tabular-nums">
+          {submission.total_score} / {submission.max_possible_score} pts
+        </span>
+      )}
+      {submission.status === "pending" && (
+        <Link href={`/bounties/${bountyId}/my-submission`} className={primary}>
+          Edit Submission
+        </Link>
+      )}
+      {submission.status === "rejected" && bountyStatus === "open" && (
+        <Link href={`/bounties/${bountyId}/submit`} className={primary}>
+          Submit Again
+        </Link>
+      )}
+      {submission.status !== "pending" && (
+        <Link
+          href={`/bounties/${bountyId}/my-submission`}
+          className="rounded-md border px-6 py-2 text-sm font-medium hover:bg-muted transition-colors"
+        >
+          View Submission
+        </Link>
+      )}
+    </div>
   )
 }

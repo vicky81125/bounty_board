@@ -115,6 +115,16 @@ async def get_my_submission_download_url(
     return {"download_url": signed_url}
 
 
+@participant_router.get("/bounties/{bounty_id}/submissions/mine/all")
+async def list_my_submissions(
+    bounty_id: UUID,
+    user: User = Depends(require_participant),
+    pool: asyncpg.Pool = Depends(get_pool),
+) -> Any:
+    """Return all of the caller's submissions for this bounty (newest first)."""
+    return await submissions_repo.list_mine(pool, bounty_id, user.id)
+
+
 @participant_router.get("/bounties/{bounty_id}/submissions/mine")
 async def get_my_submission(
     bounty_id: UUID,

@@ -149,7 +149,7 @@ async def get_by_id_and_bounty(
 
 
 async def get_mine(pool: asyncpg.Pool, bounty_id: UUID, user_id: UUID) -> dict | None:
-    """Get the user's non-upload_pending submission for a bounty."""
+    """Get the user's latest non-upload_pending submission for a bounty."""
     row = await pool.fetchrow(
         """
         SELECT * FROM submissions
@@ -162,6 +162,21 @@ async def get_mine(pool: asyncpg.Pool, bounty_id: UUID, user_id: UUID) -> dict |
         user_id,
     )
     return dict(row) if row else None
+
+
+async def list_mine(pool: asyncpg.Pool, bounty_id: UUID, user_id: UUID) -> list[dict]:
+    """Get all of the user's non-upload_pending submissions for a bounty, newest first."""
+    rows = await pool.fetch(
+        """
+        SELECT * FROM submissions
+        WHERE bounty_id = $1 AND user_id = $2
+          AND status != 'upload_pending'
+        ORDER BY attempt_number DESC
+        """,
+        bounty_id,
+        user_id,
+    )
+    return [dict(r) for r in rows]
 
 
 async def update(

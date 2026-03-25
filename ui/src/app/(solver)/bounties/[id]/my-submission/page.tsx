@@ -14,6 +14,8 @@ interface Submission {
   attempt_number: number
   review_notes: string | null
   submitted_at: string
+  total_score: number | null
+  max_possible_score: number | null
 }
 
 interface Bounty {
@@ -81,6 +83,43 @@ export default async function MySubmissionPage({ params }: Props) {
           {submission.submission_type.replace("_", " ")}
         </span>
       </div>
+
+      {/* Score result */}
+      {submission.status === "scored" && submission.total_score != null && (
+        <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-4 space-y-2">
+          <p className="text-sm font-semibold text-green-900">Your Score</p>
+          <div className="flex items-baseline gap-2">
+            <span className="text-3xl font-bold tabular-nums text-green-800">
+              {submission.total_score}
+            </span>
+            <span className="text-lg text-green-700 font-medium">
+              / {submission.max_possible_score} pts
+            </span>
+          </div>
+          {submission.max_possible_score != null && submission.max_possible_score > 0 && (
+            <div className="space-y-1">
+              <div className="w-full bg-green-200 rounded-full h-2 overflow-hidden">
+                <div
+                  className="h-2 rounded-full bg-green-600 transition-all"
+                  style={{
+                    width: `${Math.min(100, (submission.total_score / submission.max_possible_score) * 100).toFixed(1)}%`,
+                  }}
+                />
+              </div>
+              <p className="text-xs text-green-700 text-right">
+                {((submission.total_score / submission.max_possible_score) * 100).toFixed(1)}%
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Under review notice */}
+      {submission.status === "under_review" && (
+        <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+          Your submission is being reviewed. You will see your score here once grading is complete.
+        </div>
+      )}
 
       {/* Rejection notes */}
       {submission.status === "rejected" && submission.review_notes && (
