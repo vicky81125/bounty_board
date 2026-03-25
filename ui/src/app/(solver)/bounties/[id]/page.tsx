@@ -104,7 +104,7 @@ export default async function BountyDetailPage({ params, searchParams }: Props) 
   const validTab = ["details", "leaderboard", "submissions"].includes(tab) ? tab : "details"
 
   return (
-    <article className="max-w-3xl space-y-4">
+    <article className="max-w-3xl mx-auto space-y-4">
       {/* Header — always visible */}
       <div className="space-y-3">
         <div className="flex flex-wrap items-center gap-2">

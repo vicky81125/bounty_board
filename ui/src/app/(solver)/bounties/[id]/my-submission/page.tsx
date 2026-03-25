@@ -66,7 +66,7 @@ export default async function MySubmissionPage({ params }: Props) {
   const cfg = statusConfig[submission.status] ?? statusConfig.pending
 
   return (
-    <div className="max-w-xl space-y-6">
+    <div className="max-w-xl mx-auto space-y-6">
       <div>
         <h1 className="text-2xl font-bold">{bounty.title}</h1>
         <p className="text-sm text-muted-foreground mt-1">

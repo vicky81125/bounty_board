@@ -132,7 +132,7 @@ export default function SubmitPage() {
   const formats = bounty.submission_formats ?? []
 
   return (
-    <div className="max-w-xl space-y-6">
+    <div className="max-w-xl mx-auto space-y-6">
       <div>
         <h1 className="text-2xl font-bold">Submit Solution</h1>
         <p className="text-sm text-muted-foreground mt-1">{bounty.title}</p>
