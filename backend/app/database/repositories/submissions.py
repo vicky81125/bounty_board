@@ -111,6 +111,32 @@ async def create(
     return dict(row)
 
 
+async def get(pool: asyncpg.Pool, sub_id: UUID) -> dict | None:
+    """Fetch a submission by ID with no additional scoping."""
+    row = await pool.fetchrow("SELECT * FROM submissions WHERE id = $1", sub_id)
+    return dict(row) if row else None
+
+
+async def mark_scored(
+    conn: asyncpg.Connection,
+    sub_id: UUID,
+    total_score: int,
+    max_possible_score: int,
+) -> None:
+    """Set status='scored' and persist score totals. Must be called inside a transaction."""
+    await conn.execute(
+        """
+        UPDATE submissions
+        SET status = 'scored', total_score = $2, max_possible_score = $3,
+            scored_at = NOW(), updated_at = NOW()
+        WHERE id = $1
+        """,
+        sub_id,
+        total_score,
+        max_possible_score,
+    )
+
+
 async def get_by_id_and_bounty(
     pool: asyncpg.Pool, sub_id: UUID, bounty_id: UUID
 ) -> dict | None:

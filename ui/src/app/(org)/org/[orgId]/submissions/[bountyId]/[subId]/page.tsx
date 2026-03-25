@@ -18,6 +18,8 @@ interface Submission {
   review_notes: string | null
   submitted_at: string | null
   reviewed_at: string | null
+  total_score: number | null
+  max_possible_score: number | null
 }
 
 interface Bounty {
@@ -159,7 +161,32 @@ export default async function SubmissionDetailPage({ params }: Props) {
                   <span>{bounty.rubric.reduce((s, r) => s + r.max_points, 0)} pts</span>
                 </li>
               </ul>
-              <p className="text-xs text-muted-foreground">Scoring available in Phase 4</p>
+
+              {submission.status === "under_review" && (
+                <Link
+                  href={`/org/${orgId}/submissions/${bountyId}/${subId}/score`}
+                  className="inline-block w-full text-center rounded-md bg-primary px-3 py-2 text-xs font-medium text-primary-foreground hover:opacity-90 transition-opacity"
+                >
+                  Score Submission
+                </Link>
+              )}
+
+              {submission.status === "scored" && submission.total_score != null && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-muted-foreground">Score</span>
+                    <span className="rounded-full bg-green-100 text-green-800 px-2.5 py-0.5 text-xs font-semibold tabular-nums">
+                      {submission.total_score} / {submission.max_possible_score}
+                    </span>
+                  </div>
+                  <Link
+                    href={`/org/${orgId}/submissions/${bountyId}/${subId}/score`}
+                    className="inline-block text-xs text-primary hover:underline"
+                  >
+                    Revise Score
+                  </Link>
+                </div>
+              )}
             </div>
           )}
         </div>

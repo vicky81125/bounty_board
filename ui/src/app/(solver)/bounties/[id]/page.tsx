@@ -2,6 +2,7 @@ import Link from "next/link"
 import { notFound } from "next/navigation"
 import { serverFetch } from "@/lib/server-api"
 import { getServerSession } from "@/lib/server-auth"
+import { BountyLeaderboard } from "@/components/leaderboard/bounty-leaderboard"
 
 interface Resource {
   label: string
@@ -249,10 +250,8 @@ export default async function BountyDetailPage({ params }: Props) {
         </button>
       </div>
 
-      {/* Leaderboard placeholder */}
-      <div className="rounded-lg border border-dashed p-6 text-center text-muted-foreground text-sm">
-        Leaderboard coming soon
-      </div>
+      {/* Leaderboard */}
+      <BountyLeaderboard bountyId={id} />
     </article>
   )
 }

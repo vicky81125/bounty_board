@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { usePathname } from "next/navigation"
-import { Building2, LayoutDashboard, ListTodo, LogOut, Users } from "lucide-react"
+import { Building2, LayoutDashboard, ListTodo, LogOut, Trophy, Users } from "lucide-react"
 import { useAuth } from "@/providers/auth-provider"
 import type { AuthUser } from "@/lib/auth"
 import { cn } from "@/lib/utils"
@@ -30,6 +30,7 @@ export function OrgShell({ user, children, orgId, orgRole }: OrgShellProps) {
         { href: `/org/${orgId}/dashboard`, label: "Dashboard", icon: LayoutDashboard },
         { href: `/org/${orgId}/bounties`, label: "Bounties", icon: ListTodo },
         { href: `/org/${orgId}/submissions`, label: "Submissions", icon: ListTodo },
+        { href: `/org/${orgId}/leaderboard`, label: "Leaderboard", icon: Trophy },
         { href: `/org/${orgId}/members`, label: "Members", icon: Users, adminOnly: true },
       ]
     : [

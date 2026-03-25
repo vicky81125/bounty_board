@@ -11,6 +11,8 @@ interface Submission {
   status: string
   attempt_number: number
   submitted_at: string | null
+  total_score: number | null
+  max_possible_score: number | null
 }
 
 interface Props {
@@ -93,6 +95,7 @@ export default async function BountySubmissionsPage({ params, searchParams }: Pr
                 <th className="px-4 py-3 text-left font-medium">Submitted</th>
                 <th className="px-4 py-3 text-left font-medium">Type</th>
                 <th className="px-4 py-3 text-left font-medium">Status</th>
+                <th className="px-4 py-3 text-right font-medium">Score</th>
                 <th className="px-4 py-3 text-right font-medium">Actions</th>
               </tr>
             </thead>
@@ -121,6 +124,22 @@ export default async function BountySubmissionsPage({ params, searchParams }: Pr
                     >
                       {sub.status.replace("_", " ")}
                     </span>
+                  </td>
+                  <td className="px-4 py-3 text-right tabular-nums text-sm">
+                    {sub.status === "scored" && sub.total_score != null ? (
+                      <span className="font-medium">
+                        {sub.total_score}/{sub.max_possible_score}
+                      </span>
+                    ) : sub.status === "under_review" ? (
+                      <Link
+                        href={`/org/${orgId}/submissions/${bountyId}/${sub.id}/score`}
+                        className="text-xs text-primary hover:underline"
+                      >
+                        Score
+                      </Link>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-2">

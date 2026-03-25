@@ -10,6 +10,8 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
 from app.api.routes import bounties, identity, orgs
+from app.api.routes.scores import org_router as org_scores_router
+from app.api.routes.scores import public_router as public_leaderboard_router
 from app.api.routes.submissions import org_router as org_submissions_router
 from app.api.routes.submissions import participant_router as participant_submissions_router
 from app.config import get_settings
@@ -70,6 +72,8 @@ def create_app() -> FastAPI:
     app.include_router(bounties.router, prefix=settings.api_prefix)
     app.include_router(participant_submissions_router, prefix=settings.api_prefix)
     app.include_router(org_submissions_router, prefix=settings.api_prefix)
+    app.include_router(org_scores_router, prefix=settings.api_prefix)
+    app.include_router(public_leaderboard_router, prefix=settings.api_prefix)
     app.include_router(_health_router())
 
     return app
